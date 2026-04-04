@@ -1,0 +1,214 @@
+import { Router, Request, Response } from 'express'
+import { body, validationResult } from 'express-validator'
+import prisma from '../config/database'
+import { hashPassword, comparePassword } from '../utils/password'
+import { generateToken, generateRefreshToken, verifyToken } from '../utils/jwt'
+import { sendSuccess, sendError } from '../utils/apiResponse'
+import { authenticate, AuthRequest } from '../middleware/auth'
+import { authLimiter } from '../middleware/rateLimiter'
+import logger from '../config/logger'
+
+const router = Router()
+
+// POST /auth/register
+router.post(
+  '/register',
+  authLimiter,
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('password').isLength({ min: 8 }),
+    body('username').isLength({ min: 3, max: 30 }).trim(),
+    body('accept_terms').isBoolean().equals('true'),
+    body('age_confirmed').isBoolean().equals('true'),
+  ],
+  async (req: Request, res: Response): Promise<void> => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      sendError(res, 'Ongeldige invoer', 400, JSON.stringify(errors.array()))
+      return
+    }
+
+    const { email, password, username } = req.body
+
+    try {
+      const existing = await prisma.user.findFirst({
+        where: { OR: [{ email }, { username }] },
+      })
+
+      if (existing) {
+        sendError(res, 'E-mail of gebruikersnaam is al in gebruik', 409)
+        return
+      }
+
+      const password_hash = await hashPassword(password)
+
+      const user = await prisma.user.create({
+        data: { email, password_hash, username },
+        select: { id: true, email: true, username: true, tier: true, kyc_status: true, balance_credits: true },
+      })
+
+      const access_token = generateToken({ userId: user.id, email: user.email, role: 'user' })
+      const refresh_token = generateRefreshToken(user.id)
+
+      logger.info('User registered', { userId: user.id, email })
+
+      sendSuccess(res, {
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          balance_credits: Number(user.balance_credits),
+          tier: user.tier.toLowerCase(),
+          kyc_status: user.kyc_status.toLowerCase(),
+          role: 'user',
+        },
+        access_token,
+        refresh_token,
+        expires_in: 86400,
+      }, 'Account aangemaakt', 201)
+    } catch (err) {
+      logger.error('Register error', { err })
+      sendError(res, 'Registratie mislukt', 500)
+    }
+  }
+)
+
+// POST /auth/login
+router.post(
+  '/login',
+  authLimiter,
+  [
+    body('email').isEmail().normalizeEmail(),
+    body('password').notEmpty(),
+  ],
+  async (req: Request, res: Response): Promise<void> => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      sendError(res, 'Ongeldige invoer', 400)
+      return
+    }
+
+    const { email, password } = req.body
+
+    try {
+      const user = await prisma.user.findUnique({
+        where: { email },
+        select: {
+          id: true, email: true, username: true, password_hash: true,
+          tier: true, kyc_status: true, balance_credits: true,
+          is_suspended: true, is_admin: true,
+        },
+      })
+
+      if (!user || !(await comparePassword(password, user.password_hash))) {
+        sendError(res, 'Ongeldige inloggegevens', 401)
+        return
+      }
+
+      if (user.is_suspended) {
+        sendError(res, 'Account gesuspendeerd', 403)
+        return
+      }
+
+      const role = user.is_admin ? 'admin' : 'user'
+      const access_token = generateToken({ userId: user.id, email: user.email, role })
+      const refresh_token = generateRefreshToken(user.id)
+
+      // Update last_active
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { last_active: new Date() },
+      })
+
+      sendSuccess(res, {
+        user: {
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          balance_credits: Number(user.balance_credits),
+          tier: user.tier.toLowerCase(),
+          kyc_status: user.kyc_status.toLowerCase(),
+          role,
+        },
+        access_token,
+        refresh_token,
+        expires_in: 86400,
+      })
+    } catch (err) {
+      logger.error('Login error', { err })
+      sendError(res, 'Inloggen mislukt', 500)
+    }
+  }
+)
+
+// GET /auth/me
+router.get('/me', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { id: req.user!.id },
+      select: {
+        id: true, email: true, username: true, tier: true,
+        kyc_status: true, balance_credits: true, is_admin: true,
+        created_at: true, last_active: true,
+      },
+    })
+
+    if (!user) {
+      sendError(res, 'Gebruiker niet gevonden', 404)
+      return
+    }
+
+    sendSuccess(res, {
+      id: user.id,
+      email: user.email,
+      username: user.username,
+      balance_credits: Number(user.balance_credits),
+      tier: user.tier.toLowerCase(),
+      kyc_status: user.kyc_status.toLowerCase(),
+      role: user.is_admin ? 'admin' : 'user',
+      created_at: user.created_at,
+      last_active: user.last_active,
+    })
+  } catch (err) {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// POST /auth/logout
+router.post('/logout', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  sendSuccess(res, null, 'Uitgelogd')
+})
+
+// POST /auth/refresh
+router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
+  const { refresh_token } = req.body
+  if (!refresh_token) {
+    sendError(res, 'Refresh token vereist', 400)
+    return
+  }
+
+  try {
+    const payload = verifyToken(refresh_token)
+    const user = await prisma.user.findUnique({
+      where: { id: payload.userId },
+      select: { id: true, email: true, is_admin: true },
+    })
+
+    if (!user) {
+      sendError(res, 'Gebruiker niet gevonden', 401)
+      return
+    }
+
+    const access_token = generateToken({
+      userId: user.id,
+      email: user.email,
+      role: user.is_admin ? 'admin' : 'user',
+    })
+
+    sendSuccess(res, { access_token, expires_in: 86400 })
+  } catch {
+    sendError(res, 'Ongeldig refresh token', 401)
+  }
+})
+
+export default router
