@@ -1,0 +1,481 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ────────────────────────────────────────────────────────────────────
+
+enum Tier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+  RARE
+}
+
+enum KycStatus {
+  PENDING
+  SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+enum SeasonStatus {
+  UPCOMING
+  REGISTRATION
+  ACTIVE
+  COMPLETED
+}
+
+enum GameweekStatus {
+  UPCOMING
+  ACTIVE
+  COMPLETED
+}
+
+enum Position {
+  GK
+  DEF
+  MID
+  FWD
+}
+
+enum PlayerAvailability {
+  AVAILABLE
+  INJURED
+  SUSPENDED
+  DOUBTFUL
+}
+
+enum SlotPosition {
+  GK
+  DEF1
+  DEF2
+  DEF3
+  DEF4
+  DEF5
+  MID1
+  MID2
+  MID3
+  MID4
+  MID5
+  FWD1
+  FWD2
+  FWD3
+  BENCH1
+  BENCH2
+  BENCH3
+  BENCH4
+}
+
+enum MatchStatus {
+  SCHEDULED
+  LIVE
+  HALFTIME
+  COMPLETED
+  POSTPONED
+  CANCELLED
+}
+
+enum EventType {
+  GOAL
+  ASSIST
+  CLEAN_SHEET
+  YELLOW_CARD
+  RED_CARD
+  OWN_GOAL
+  PENALTY_SAVED
+  PENALTY_MISSED
+  SAVE
+  MAN_OF_MATCH
+  HIGH_RATING
+  BRACE_BONUS
+  HATTRICK_BONUS
+}
+
+enum ListingType {
+  FIXED
+  AUCTION
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  CANCELLED
+  EXPIRED
+}
+
+enum TransactionType {
+  DEPOSIT
+  WITHDRAWAL
+  ENTRY_FEE
+  PAYOUT
+  MARKETPLACE_SALE
+  MARKETPLACE_BUY
+  PLATFORM_FEE
+  POWERUP_PURCHASE
+  PACK_PURCHASE
+  REFUND
+  PENALTY_FEE
+  BONUS
+}
+
+enum TxStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  REVERSED
+}
+
+enum PowerupType {
+  DOUBLE_POINTS
+  NEGATIVE_SHIELD
+  STREAK_BOOST
+  HOT_TRANSFER
+  CAPTAIN_LOCK
+}
+
+enum PowerupStatus {
+  AVAILABLE
+  ACTIVE
+  USED
+  EXPIRED
+}
+
+// ─── Models ───────────────────────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(uuid())
+  email           String    @unique
+  password_hash   String
+  username        String    @unique
+  balance_credits Decimal   @default(0) @db.Decimal(10, 2)
+  balance_pending Decimal   @default(0) @db.Decimal(10, 2)
+  tier            Tier      @default(BRONZE)
+  kyc_status      KycStatus @default(PENDING)
+  kyc_level       Int       @default(0)
+  is_admin        Boolean   @default(false)
+  is_suspended    Boolean   @default(false)
+  date_of_birth   DateTime?
+  country         String?
+  created_at      DateTime  @default(now())
+  updated_at      DateTime  @updatedAt
+  last_active     DateTime  @default(now())
+
+  teams              Team[]
+  transactions       Transaction[]
+  listings           MarketplaceListing[]
+  bids               MarketplaceBid[]
+  powerups           UserPowerup[]
+  sessions           UserSession[]
+  achievements       UserAchievement[]
+  responsible_gaming ResponsibleGaming?
+
+  @@map("users")
+}
+
+model Season {
+  id               Int          @id @default(autoincrement())
+  name             String
+  competition      String
+  start_date       DateTime
+  end_date         DateTime
+  entry_fee_min    Decimal      @db.Decimal(8, 2)
+  entry_fee_max    Decimal      @db.Decimal(8, 2)
+  total_pot        Decimal      @default(0) @db.Decimal(12, 2)
+  platform_fee_pct Decimal      @default(20) @db.Decimal(5, 2)
+  status           SeasonStatus @default(UPCOMING)
+  created_at       DateTime     @default(now())
+
+  gameweeks Gameweek[]
+  teams     Team[]
+
+  @@map("seasons")
+}
+
+model Gameweek {
+  id         Int            @id @default(autoincrement())
+  season_id  Int
+  number     Int
+  deadline   DateTime
+  start_date DateTime
+  end_date   DateTime
+  status     GameweekStatus @default(UPCOMING)
+
+  season         Season         @relation(fields: [season_id], references: [id])
+  matches        Match[]
+  team_gameweeks TeamGameweek[]
+
+  @@map("gameweeks")
+}
+
+model Player {
+  id            Int                @id @default(autoincrement())
+  external_id   String             @unique
+  name          String
+  display_name  String
+  club          String
+  club_id       Int
+  position      Position
+  nationality   String?
+  photo_url     String?
+  price         Decimal            @default(5) @db.Decimal(8, 2)
+  form          Decimal            @default(5) @db.Decimal(4, 2)
+  total_points  Decimal            @default(0) @db.Decimal(8, 2)
+  availability  PlayerAvailability @default(AVAILABLE)
+  injury_return DateTime?
+  created_at    DateTime           @default(now())
+  updated_at    DateTime           @updatedAt
+
+  team_players       TeamPlayer[]
+  match_performances MatchPerformance[]
+  listings           MarketplaceListing[]
+  price_history      PlayerPriceHistory[]
+
+  @@map("players")
+}
+
+model Team {
+  id                     String   @id @default(uuid())
+  user_id                String
+  season_id              Int
+  name                   String
+  formation              String   @default("4-4-2")
+  captain_player_id      Int?
+  vice_captain_player_id Int?
+  total_points           Decimal  @default(0) @db.Decimal(10, 2)
+  entry_fee              Decimal  @db.Decimal(8, 2)
+  created_at             DateTime @default(now())
+  updated_at             DateTime @updatedAt
+
+  user      User           @relation(fields: [user_id], references: [id])
+  season    Season         @relation(fields: [season_id], references: [id])
+  players   TeamPlayer[]
+  gameweeks TeamGameweek[]
+
+  @@map("teams")
+}
+
+model TeamPlayer {
+  id              Int          @id @default(autoincrement())
+  team_id         String
+  player_id       Int
+  slot_position   SlotPosition
+  is_captain      Boolean      @default(false)
+  is_vice_captain Boolean      @default(false)
+  purchase_price  Decimal      @db.Decimal(8, 2)
+  added_at        DateTime     @default(now())
+
+  team   Team   @relation(fields: [team_id], references: [id])
+  player Player @relation(fields: [player_id], references: [id])
+
+  @@map("team_players")
+}
+
+model TeamGameweek {
+  id           Int     @id @default(autoincrement())
+  team_id      String
+  gameweek_id  Int
+  points       Decimal @default(0) @db.Decimal(8, 2)
+  rank         Int?
+  prize_amount Decimal @default(0) @db.Decimal(8, 2)
+
+  team     Team     @relation(fields: [team_id], references: [id])
+  gameweek Gameweek @relation(fields: [gameweek_id], references: [id])
+
+  @@unique([team_id, gameweek_id])
+  @@map("team_gameweeks")
+}
+
+model Match {
+  id           Int         @id @default(autoincrement())
+  external_id  String      @unique
+  gameweek_id  Int
+  home_team    String
+  home_team_id Int
+  away_team    String
+  away_team_id Int
+  home_score   Int?
+  away_score   Int?
+  kickoff      DateTime
+  status       MatchStatus @default(SCHEDULED)
+  minute       Int?
+  created_at   DateTime    @default(now())
+  updated_at   DateTime    @updatedAt
+
+  gameweek     Gameweek           @relation(fields: [gameweek_id], references: [id])
+  events       MatchEvent[]
+  performances MatchPerformance[]
+
+  @@map("matches")
+}
+
+model MatchEvent {
+  id             Int       @id @default(autoincrement())
+  match_id       Int
+  player_id      Int?
+  event_type     EventType
+  minute         Int
+  points_awarded Decimal   @db.Decimal(6, 2)
+  detail         String?
+  created_at     DateTime  @default(now())
+
+  match Match @relation(fields: [match_id], references: [id])
+
+  @@map("match_events")
+}
+
+model MatchPerformance {
+  id              Int      @id @default(autoincrement())
+  match_id        Int
+  player_id       Int
+  minutes_played  Int      @default(0)
+  goals           Int      @default(0)
+  assists         Int      @default(0)
+  clean_sheet     Boolean  @default(false)
+  yellow_cards    Int      @default(0)
+  red_cards       Int      @default(0)
+  own_goals       Int      @default(0)
+  saves           Int      @default(0)
+  penalty_saved   Boolean  @default(false)
+  penalty_missed  Boolean  @default(false)
+  rating          Decimal? @db.Decimal(3, 1)
+  total_points    Decimal  @default(0) @db.Decimal(8, 2)
+
+  match  Match  @relation(fields: [match_id], references: [id])
+  player Player @relation(fields: [player_id], references: [id])
+
+  @@unique([match_id, player_id])
+  @@map("match_performances")
+}
+
+model Transaction {
+  id             String          @id @default(uuid())
+  user_id        String
+  type           TransactionType
+  amount         Decimal         @db.Decimal(10, 2)
+  credits_amount Decimal         @db.Decimal(10, 2)
+  reference      String?
+  status         TxStatus        @default(PENDING)
+  description    String?
+  metadata       Json?
+  created_at     DateTime        @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("transactions")
+}
+
+model MarketplaceListing {
+  id                String        @id @default(uuid())
+  seller_id         String
+  player_id         Int
+  price             Decimal       @db.Decimal(8, 2)
+  listing_type      ListingType
+  min_bid           Decimal?      @db.Decimal(8, 2)
+  current_bid       Decimal?      @db.Decimal(8, 2)
+  current_bidder_id String?
+  expires_at        DateTime
+  status            ListingStatus @default(ACTIVE)
+  created_at        DateTime      @default(now())
+
+  seller User             @relation(fields: [seller_id], references: [id])
+  player Player           @relation(fields: [player_id], references: [id])
+  bids   MarketplaceBid[]
+
+  @@map("marketplace_listings")
+}
+
+model MarketplaceBid {
+  id         String   @id @default(uuid())
+  listing_id String
+  bidder_id  String
+  amount     Decimal  @db.Decimal(8, 2)
+  created_at DateTime @default(now())
+
+  listing MarketplaceListing @relation(fields: [listing_id], references: [id])
+  bidder  User               @relation(fields: [bidder_id], references: [id])
+
+  @@map("marketplace_bids")
+}
+
+model PlayerPriceHistory {
+  id          Int      @id @default(autoincrement())
+  player_id   Int
+  price       Decimal  @db.Decimal(8, 2)
+  recorded_at DateTime @default(now())
+
+  player Player @relation(fields: [player_id], references: [id])
+
+  @@map("player_price_history")
+}
+
+model UserPowerup {
+  id           Int          @id @default(autoincrement())
+  user_id      String
+  powerup_type PowerupType
+  status       PowerupStatus @default(AVAILABLE)
+  gameweek_id  Int?
+  purchased_at DateTime     @default(now())
+  used_at      DateTime?
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("user_powerups")
+}
+
+model UserSession {
+  id         String   @id @default(uuid())
+  user_id    String
+  token      String   @unique
+  ip_address String?
+  user_agent String?
+  expires_at DateTime
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("user_sessions")
+}
+
+model Achievement {
+  id             Int    @id @default(autoincrement())
+  code           String @unique
+  name           String
+  description    String
+  icon           String
+  points_reward  Int    @default(0)
+  credits_reward Decimal @default(0) @db.Decimal(8, 2)
+
+  @@map("achievements")
+}
+
+model UserAchievement {
+  id             Int      @id @default(autoincrement())
+  user_id        String
+  achievement_id Int
+  earned_at      DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("user_achievements")
+}
+
+model ResponsibleGaming {
+  id                    Int      @id @default(autoincrement())
+  user_id               String   @unique
+  daily_limit           Decimal? @db.Decimal(8, 2)
+  weekly_limit          Decimal? @db.Decimal(8, 2)
+  monthly_limit         Decimal? @db.Decimal(8, 2)
+  session_limit_minutes Int?
+  self_excluded         Boolean  @default(false)
+  excluded_until        DateTime?
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("responsible_gaming")
+}
