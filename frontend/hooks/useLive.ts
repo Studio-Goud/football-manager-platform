@@ -43,7 +43,7 @@ export function useLive() {
       socket.off('match:score')
       socket.off('user:points')
     }
-  }, [addEvent, updateScore, setLivePoints])
+  }, [addEvent, updateMatchScore, setLivePoints])
 
   const subscribeToMatch = useCallback((matchId: string) => {
     const socket = getSocket()
