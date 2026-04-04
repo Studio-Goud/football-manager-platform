@@ -39,7 +39,7 @@ export default function DashboardPage() {
           </h1>
           <p className="text-gray-400 text-sm mt-1">Speelronde 28 · Eredivisie 2024/25</p>
         </div>
-        <Badge variant={currentUser.tier} className="hidden sm:flex">
+        <Badge variant="default" className="hidden sm:flex">
           {currentUser.tier.toUpperCase()}
         </Badge>
       </div>

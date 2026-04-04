@@ -589,4 +589,3 @@ export const mockPriceHistory: PricePoint[] = Array.from({ length: 14 }, (_, i) 
 // ─── Mock User Powerups ───────────────────────────────────────────────────────
 
 export const mockUserPowerups = mockPowerups
-]

@@ -6,3 +6,6 @@ dist/
 logs/
 .next/
 prisma/migrations/dev.db
+
+# Local Netlify folder
+.netlify
