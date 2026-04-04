@@ -224,3 +224,23 @@ export class MockSocketManager {
 }
 
 export const mockSocket = new MockSocketManager()
+
+// Standalone getSocket helper used by useLive hook
+// Returns a no-op socket when no backend is available (Netlify/demo mode)
+export function getSocket() {
+  const noopSocket = {
+    on: (_event: string, _handler: (...args: unknown[]) => void) => noopSocket,
+    off: (_event: string, _handler?: (...args: unknown[]) => void) => noopSocket,
+    emit: (_event: string, ..._args: unknown[]) => noopSocket,
+    connected: false,
+  }
+
+  if (typeof window === 'undefined') return noopSocket
+  if (!process.env.NEXT_PUBLIC_WS_URL) return noopSocket
+
+  // If real socket manager is connected, use it
+  const realSocket = socketManager.getSocket()
+  if (realSocket) return realSocket as unknown as typeof noopSocket
+
+  return noopSocket
+}

@@ -7,7 +7,7 @@ import api from '@/lib/api'
 import { Match, MatchEvent } from '@/types'
 
 export function useLive() {
-  const { matches, livePoints, setMatches, addEvent, updateScore, setLivePoints } = useLiveStore()
+  const { matches, livePoints, setMatches, addEvent, updateMatchScore, setLivePoints } = useLiveStore()
 
   const matchesQuery = useQuery({
     queryKey: QUERY_KEYS.liveMatches,
@@ -31,7 +31,7 @@ export function useLive() {
     })
 
     socket.on('match:score', (data: { match_id: string; home_score: number; away_score: number; minute: number }) => {
-      updateScore(data.match_id, data.home_score, data.away_score, data.minute)
+      updateMatchScore(data.match_id, data.home_score, data.away_score, data.minute)
     })
 
     socket.on('user:points', (data: { total_points: number; delta: number; event: MatchEvent }) => {

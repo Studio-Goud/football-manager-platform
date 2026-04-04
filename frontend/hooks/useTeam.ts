@@ -1,5 +1,4 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useTeamStore } from '@/store/teamStore'
 import { QUERY_KEYS } from '@/lib/constants'
 import api from '@/lib/api'
 import { Team, TeamPlayer } from '@/types'
@@ -7,8 +6,6 @@ import toast from 'react-hot-toast'
 
 export function useTeam(seasonId?: string) {
   const queryClient = useQueryClient()
-  const { setTeam } = useTeamStore()
-
   const teamQuery = useQuery({
     queryKey: QUERY_KEYS.team(seasonId ?? 'current'),
     queryFn: async (): Promise<Team> => {
@@ -16,7 +13,6 @@ export function useTeam(seasonId?: string) {
       return res.data.data
     },
     enabled: true,
-    onSuccess: (data: Team) => setTeam(data),
   } as Parameters<typeof useQuery>[0])
 
   const saveMutation = useMutation({

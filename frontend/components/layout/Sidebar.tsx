@@ -42,11 +42,11 @@ const navItems: NavItem[] = [
 ]
 
 interface SidebarProps {
-  isOpen: boolean
-  onClose: () => void
+  isOpen?: boolean
+  onClose?: () => void
 }
 
-export function Sidebar({ isOpen, onClose }: SidebarProps) {
+export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
   const pathname = usePathname()
   const { user } = useAuthStore()
 

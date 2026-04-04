@@ -11,7 +11,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 
 interface TopbarProps {
-  onMenuToggle: () => void
+  onMenuToggle?: () => void
 }
 
 function SeasonCountdown() {
