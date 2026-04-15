@@ -302,7 +302,8 @@ export async function scoreDuel(duelId: string): Promise<void> {
       : null // draw
 
   const stake = Number(duel.stake)
-  const updates: Promise<any>[] = [
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const updates: any[] = [
     prisma.duel.update({
       where: { id: duelId },
       data: {

@@ -24,7 +24,7 @@ export async function ensureTestAccount(): Promise<void> {
           kyc_status: 'VERIFIED',
           kyc_level: 1,
           is_admin: true,
-          balance_credits: existing.balance_credits < 1000 ? 5000 : undefined,
+          balance_credits: Number(existing.balance_credits) < 1000 ? 5000 : undefined,
         },
       })
       logger.info('Test account bijgewerkt', { email })
