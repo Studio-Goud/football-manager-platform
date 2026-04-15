@@ -8,7 +8,8 @@ RUN npm ci --ignore-scripts
 
 # Prisma schema kopiëren en client genereren
 COPY backend/prisma ./prisma
-RUN DATABASE_PROVIDER=postgresql DATABASE_URL=postgresql://placeholder npx prisma generate --schema=./prisma/schema.prisma
+RUN sed -i 's/provider = env("DATABASE_PROVIDER")/provider = "postgresql"/' ./prisma/schema.prisma && \
+    DATABASE_URL=postgresql://placeholder npx prisma generate --schema=./prisma/schema.prisma
 
 # Rest van de broncode
 COPY backend/ .
