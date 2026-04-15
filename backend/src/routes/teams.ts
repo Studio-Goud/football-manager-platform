@@ -3,7 +3,9 @@ import { body, validationResult } from 'express-validator'
 import prisma from '../config/database'
 import { sendSuccess, sendError } from '../utils/apiResponse'
 import { authenticate, AuthRequest } from '../middleware/auth'
-import { calculateTeamGameweekPoints, calculateLeaderboard, calculatePrizeDistribution } from '../services/scoringService'
+import { calculateTeamGameweekPoints, calculateLeaderboard, calculatePrizeDistribution, TACTIC_META, TacticStyle } from '../services/scoringService'
+import { getTacticImpact } from '../services/tacticImpactService'
+import { generateScoutReport } from '../services/scoutService'
 
 const router = Router()
 
@@ -33,10 +35,13 @@ router.get('/my', authenticate, async (req: AuthRequest, res: Response): Promise
       return
     }
 
+    const tacticStyle = team.tactic_style as TacticStyle
     sendSuccess(res, {
       id: team.id,
       name: team.name,
       formation: team.formation,
+      tactic_style: tacticStyle,
+      tactic_meta: TACTIC_META[tacticStyle] ?? TACTIC_META.BALANCED,
       captain_id: team.captain_player_id?.toString(),
       vice_captain_id: team.vice_captain_player_id?.toString(),
       total_points: Number(team.total_points),
@@ -164,6 +169,82 @@ router.post('/:id/captain', authenticate, async (req: AuthRequest, res: Response
     sendSuccess(res, null, 'Aanvoerder gewijzigd')
   } catch {
     sendError(res, 'Wijzigen mislukt', 500)
+  }
+})
+
+// PATCH /teams/my/tactic — update tactic style
+router.patch('/my/tactic', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  const VALID_TACTICS: TacticStyle[] = ['BALANCED', 'HIGH_PRESS', 'LOW_BLOCK', 'TIKI_TAKA', 'COUNTER_ATTACK', 'LONG_BALL']
+  const { tactic_style } = req.body
+
+  if (!tactic_style || !VALID_TACTICS.includes(tactic_style)) {
+    sendError(res, `Ongeldige tactiek. Kies uit: ${VALID_TACTICS.join(', ')}`, 400)
+    return
+  }
+
+  try {
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+
+    const team = await prisma.team.findFirst({
+      where: {
+        user_id: req.user!.id,
+        ...(currentSeason ? { season_id: currentSeason.id } : {}),
+      },
+      orderBy: { created_at: 'desc' },
+    })
+
+    if (!team) {
+      sendError(res, 'Geen team gevonden', 404)
+      return
+    }
+
+    const updated = await prisma.team.update({
+      where: { id: team.id },
+      data: { tactic_style },
+    })
+
+    sendSuccess(res, {
+      tactic_style: updated.tactic_style,
+      tactic_meta: TACTIC_META[tactic_style as TacticStyle],
+    }, 'Tactiek bijgewerkt')
+  } catch {
+    sendError(res, 'Bijwerken mislukt', 500)
+  }
+})
+
+// GET /tactics — list all available tactics with metadata
+router.get('/tactics', authenticate, async (_req: AuthRequest, res: Response): Promise<void> => {
+  sendSuccess(res, Object.entries(TACTIC_META).map(([key, meta]) => ({
+    id: key,
+    ...meta,
+  })))
+})
+
+// GET /teams/my/tactic-impact — per-speler tactiek bonus breakdown
+router.get('/my/tactic-impact', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const impact = await getTacticImpact(req.user!.id)
+    if (!impact) {
+      sendError(res, 'Geen team gevonden', 404)
+      return
+    }
+    sendSuccess(res, impact)
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// GET /teams/my/scout — AI transfer tips
+router.get('/my/scout', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const report = await generateScoutReport(req.user!.id)
+    if (!report) {
+      sendError(res, 'Geen team gevonden', 404)
+      return
+    }
+    sendSuccess(res, report)
+  } catch {
+    sendError(res, 'Scout analyse mislukt', 500)
   }
 })
 

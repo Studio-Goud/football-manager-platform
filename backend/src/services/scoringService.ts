@@ -23,7 +23,44 @@ export const SCORING = {
   vice_captain_multiplier: 1.5,
 } as const
 
+// ─── Tactical styles ──────────────────────────────────────────────────────────
+//
+// Each tactic gives position-based multipliers that reward certain squad builds.
+// The tradeoffs are intentional: HIGH_PRESS boosts FWDs but weakens DEF scoring,
+// forcing genuine strategic choices.
+//
+// Multipliers apply to the final base points (after captain bonus, before powerups).
+
+export type TacticStyle =
+  | 'BALANCED'
+  | 'HIGH_PRESS'
+  | 'LOW_BLOCK'
+  | 'TIKI_TAKA'
+  | 'COUNTER_ATTACK'
+  | 'LONG_BALL'
+
 type PositionKey = 'GK' | 'DEF' | 'MID' | 'FWD'
+
+export const TACTIC_MULTIPLIERS: Record<TacticStyle, Record<PositionKey, number>> = {
+  //               GK     DEF    MID    FWD
+  BALANCED:      { GK: 1.00, DEF: 1.00, MID: 1.00, FWD: 1.00 },
+  HIGH_PRESS:    { GK: 0.95, DEF: 0.95, MID: 1.10, FWD: 1.25 },
+  LOW_BLOCK:     { GK: 1.25, DEF: 1.20, MID: 0.95, FWD: 0.85 },
+  TIKI_TAKA:     { GK: 1.00, DEF: 1.10, MID: 1.25, FWD: 0.95 },
+  COUNTER_ATTACK:{ GK: 1.05, DEF: 1.05, MID: 0.95, FWD: 1.30 },
+  LONG_BALL:     { GK: 1.00, DEF: 1.10, MID: 0.90, FWD: 1.20 },
+}
+
+export const TACTIC_META: Record<TacticStyle, { label: string; description: string; icon: string; bestFor: string }> = {
+  BALANCED:      { label: 'Gebalanceerd',     icon: '⚖️',  description: 'Geen bonussen, geen straffen. Veilige keuze.',         bestFor: 'Alle posities gelijk' },
+  HIGH_PRESS:    { label: 'Hoog Druk',        icon: '🔥',  description: 'Aanvallers en middenvelders drukken hoog op.',         bestFor: 'FWD-zware teams' },
+  LOW_BLOCK:     { label: 'Laag Blok',        icon: '🛡️',  description: 'Verdedigers en keeper slaan hun slag bij counters.',   bestFor: 'DEF/GK-zware teams' },
+  TIKI_TAKA:     { label: 'Tiki-Taka',        icon: '🎯',  description: 'Korte passen, middenvelders domineren het spel.',      bestFor: 'MID-zware teams' },
+  COUNTER_ATTACK:{ label: 'Counteraanval',    icon: '⚡',  description: 'Snel omschakelen, spitsen profiteren maximaal.',       bestFor: 'Snelle aanvallers' },
+  LONG_BALL:     { label: 'Lange Bal',        icon: '🎪',  description: 'Directe aanvalsstijl, sterke spitsen en back-vier.',  bestFor: 'FWD + DEF combinaties' },
+}
+
+// ─── Core scoring logic ────────────────────────────────────────────────────────
 
 interface MatchPerformanceData {
   minutes_played: number
@@ -39,11 +76,10 @@ interface MatchPerformanceData {
   rating?: number | null
 }
 
-// ─── Core scoring logic ────────────────────────────────────────────────────────
-
 export function calculatePlayerPoints(
   performance: MatchPerformanceData,
-  position: string
+  position: string,
+  tacticStyle: TacticStyle = 'BALANCED'
 ): number {
   let points = 0
   const pos = position as PositionKey
@@ -101,6 +137,11 @@ export function calculatePlayerPoints(
     points += SCORING.rating_8plus
   }
 
+  // ── Apply tactical multiplier ──────────────────────────────────────────────
+  const multipliers = TACTIC_MULTIPLIERS[tacticStyle] ?? TACTIC_MULTIPLIERS.BALANCED
+  const tacticMult = multipliers[pos] ?? 1.0
+  points = points * tacticMult
+
   return points
 }
 
@@ -115,7 +156,13 @@ export async function calculateTeamGameweekPoints(
       where: { team_id: teamId },
       include: {
         player: true,
-        team: { select: { captain_player_id: true, vice_captain_player_id: true } },
+        team: {
+          select: {
+            captain_player_id: true,
+            vice_captain_player_id: true,
+            tactic_style: true,
+          },
+        },
       },
     })
 
@@ -126,10 +173,12 @@ export async function calculateTeamGameweekPoints(
 
     if (!gameweek) return 0
 
+    const tacticStyle = (teamPlayers[0]?.team?.tactic_style ?? 'BALANCED') as TacticStyle
+
     let totalPoints = 0
 
     for (const tp of teamPlayers) {
-      if (tp.slot_position.startsWith('BENCH')) continue // Skip bench initially
+      if (tp.slot_position.startsWith('BENCH')) continue
 
       const performance = gameweek.matches
         .flatMap(m => m.performances)
@@ -151,10 +200,11 @@ export async function calculateTeamGameweekPoints(
           penalty_missed: performance.penalty_missed,
           rating: performance.rating ? Number(performance.rating) : null,
         },
-        tp.player.position
+        tp.player.position,
+        tacticStyle
       )
 
-      // Captain multiplier
+      // Captain multiplier (applied after tactic, so captaining a tactic-boosted player is doubly rewarding)
       if (tp.is_captain) {
         playerPoints *= SCORING.captain_multiplier
       } else if (tp.is_vice_captain) {
@@ -200,14 +250,11 @@ export function calculatePrizeDistribution(
   totalPot: number,
   numParticipants: number
 ): PrizeDistribution[] {
-  const platformFee = totalPot * 0.2 // 20% platform fee
+  const platformFee = totalPot * 0.2
   const prizePot = totalPot - platformFee
-
-  const topPercent = Math.ceil(numParticipants * 0.2) // Top 20% wins
+  const topPercent = Math.ceil(numParticipants * 0.2)
 
   const distributions: PrizeDistribution[] = []
-
-  // Position-based distribution for top
   const prizes = [
     { rank: 1, pct: 0.30 },
     { rank: 2, pct: 0.20 },
@@ -223,7 +270,6 @@ export function calculatePrizeDistribution(
     }
   }
 
-  // Remaining 38% shared among rank 4 to topPercent
   if (topPercent > 3) {
     const remaining = 1 - allocated
     const prizePerRank = (prizePot * remaining) / (topPercent - 3)
@@ -255,6 +301,7 @@ export async function calculateLeaderboard(seasonId: number) {
     rank: index + 1,
     team_id: team.id,
     team_name: team.name,
+    tactic_style: team.tactic_style,
     user: {
       id: team.user.id,
       username: team.user.username,
@@ -262,6 +309,6 @@ export async function calculateLeaderboard(seasonId: number) {
     },
     total_points: Number(team.total_points),
     gameweek_points: team.gameweeks[0] ? Number(team.gameweeks[0].points) : 0,
-    prize: 0, // To be calculated with calculatePrizeDistribution
+    prize: 0,
   }))
 }

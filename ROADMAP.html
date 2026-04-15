@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Football Manager Platform — Roadmap</title>
+  <style>
+    :root {
+      --green: #00FF87;
+      --blue: #3B82F6;
+      --purple: #8B5CF6;
+      --orange: #F59E0B;
+      --red: #EF4444;
+      --bg: #0A0E1A;
+      --card: #111827;
+      --border: #1E2A45;
+      --text: #F1F5F9;
+      --muted: #64748B;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 32px 16px 64px;
+    }
+
+    .container { max-width: 900px; margin: 0 auto; }
+
+    /* Header */
+    .header { text-align: center; margin-bottom: 48px; }
+    .header .badge {
+      display: inline-block;
+      background: var(--green);
+      color: #000;
+      font-size: 11px;
+      font-weight: 900;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      border-radius: 100px;
+      margin-bottom: 16px;
+    }
+    .header h1 { font-size: 36px; font-weight: 900; line-height: 1.1; }
+    .header h1 span { color: var(--green); }
+    .header p { color: var(--muted); margin-top: 10px; font-size: 15px; }
+
+    /* Overall progress */
+    .progress-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .progress-card h2 { font-size: 14px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+    .progress-bar-wrap { background: #1E2A45; border-radius: 100px; height: 10px; margin-bottom: 8px; overflow: hidden; }
+    .progress-bar-fill { height: 100%; border-radius: 100px; background: linear-gradient(90deg, var(--green), #00D4FF); transition: width 0.6s ease; }
+    .progress-labels { display: flex; justify-content: space-between; font-size: 13px; color: var(--muted); }
+    .progress-labels strong { color: var(--green); font-size: 18px; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-top: 20px; }
+    .stat-box { background: var(--bg); border-radius: 12px; padding: 16px; text-align: center; }
+    .stat-box .num { font-size: 28px; font-weight: 900; }
+    .stat-box .lbl { font-size: 11px; color: var(--muted); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .stat-done .num { color: var(--green); }
+    .stat-wip .num { color: var(--blue); }
+    .stat-next .num { color: var(--orange); }
+    .stat-total .num { color: var(--text); }
+
+    /* Sections */
+    .section { margin-bottom: 32px; }
+    .section-header {
+      display: flex; align-items: center; gap: 10px;
+      margin-bottom: 16px;
+    }
+    .section-icon { font-size: 20px; }
+    .section-title { font-size: 17px; font-weight: 800; }
+    .section-subtitle { font-size: 13px; color: var(--muted); margin-left: auto; }
+
+    /* Feature cards grid */
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+
+    .feature-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 18px;
+      position: relative;
+      transition: border-color 0.2s;
+    }
+    .feature-card:hover { border-color: #2D3F60; }
+    .feature-card.done { border-left: 3px solid var(--green); }
+    .feature-card.wip  { border-left: 3px solid var(--blue); }
+    .feature-card.next { border-left: 3px solid var(--orange); }
+    .feature-card.idea { border-left: 3px solid var(--purple); }
+
+    .feature-card .fc-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+    .feature-card .fc-title { font-size: 14px; font-weight: 700; line-height: 1.3; }
+    .feature-card .fc-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    .tag {
+      font-size: 10px; font-weight: 800; letter-spacing: 0.8px;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 100px;
+      white-space: nowrap; flex-shrink: 0;
+    }
+    .tag-done   { background: rgba(0,255,135,0.15); color: var(--green); }
+    .tag-wip    { background: rgba(59,130,246,0.15); color: var(--blue); }
+    .tag-next   { background: rgba(245,158,11,0.15); color: var(--orange); }
+    .tag-idea   { background: rgba(139,92,246,0.15); color: var(--purple); }
+
+    /* Unique features highlight */
+    .unique-section {
+      background: linear-gradient(135deg, rgba(0,255,135,0.05), rgba(0,212,255,0.05));
+      border: 1px solid rgba(0,255,135,0.2);
+      border-radius: 16px;
+      padding: 24px;
+      margin-bottom: 32px;
+    }
+    .unique-section h2 { font-size: 14px; color: var(--green); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; font-weight: 800; }
+    .unique-list { display: grid; gap: 10px; }
+    .unique-item { display: flex; gap: 12px; align-items: flex-start; }
+    .unique-item .ui-icon { font-size: 22px; flex-shrink: 0; }
+    .unique-item .ui-title { font-size: 14px; font-weight: 700; }
+    .unique-item .ui-desc { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+    /* Last updated */
+    .footer { text-align: center; margin-top: 48px; font-size: 12px; color: var(--muted); }
+
+    /* Legend */
+    .legend { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+    .legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); }
+    .legend-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .dot-done { background: var(--green); }
+    .dot-wip  { background: var(--blue); }
+    .dot-next { background: var(--orange); }
+    .dot-idea { background: var(--purple); }
+
+    @media (max-width: 600px) {
+      .stats-row { grid-template-columns: repeat(2, 1fr); }
+      .header h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="badge">Live Roadmap</div>
+    <h1>Football Manager<br><span>Platform Roadmap</span></h1>
+    <p>Bijgewerkt op 15 april 2026 — sessie 2 · Gebouwd door Ricardo</p>
+  </div>
+
+  <!-- Overall progress -->
+  <div class="progress-card">
+    <h2>Totale Voortgang</h2>
+    <div class="progress-bar-wrap">
+      <div class="progress-bar-fill" style="width: 62%"></div>
+    </div>
+    <div class="progress-labels">
+      <span>0%</span>
+      <strong>38% klaar</strong>
+      <span>100%</span>
+    </div>
+    <div class="stats-row">
+      <div class="stat-box stat-done"><div class="num">20</div><div class="lbl">Klaar</div></div>
+      <div class="stat-box stat-wip"><div class="num">0</div><div class="lbl">Bezig</div></div>
+      <div class="stat-box stat-next"><div class="num">6</div><div class="lbl">Volgende</div></div>
+      <div class="stat-box stat-total"><div class="num">32</div><div class="lbl">Totaal</div></div>
+    </div>
+  </div>
+
+  <!-- What makes this unique -->
+  <div class="unique-section">
+    <h2>🚀 Wat dit platform uniek maakt</h2>
+    <div class="unique-list">
+      <div class="unique-item">
+        <div class="ui-icon">🎯</div>
+        <div>
+          <div class="ui-title">Tactisch Systeem</div>
+          <div class="ui-desc">Jij kiest niet alleen spelers — jij kiest een tactiek die de puntenmultiplicatoren bepaalt per positie. HIGH_PRESS boost FWDs met 25%, LOW_BLOCK boost DEF/GK met 20%. Niemand anders doet dit.</div>
+        </div>
+      </div>
+      <div class="unique-item">
+        <div class="ui-icon">⚔️</div>
+        <div>
+          <div class="ui-title">Manager vs Manager Duels (gepland)</div>
+          <div class="ui-desc">Jouw elf + tactiek vs die van een tegenstander, op basis van dezelfde échte wedstrijden. Pure tactische competitie.</div>
+        </div>
+      </div>
+      <div class="unique-item">
+        <div class="ui-icon">🤖</div>
+        <div>
+          <div class="ui-title">AI Transfer Scout ✅ Live</div>
+          <div class="ui-desc">Claude Haiku analyseert jouw team + tactiek + komende fixtures en geeft 3 concrete transfertips met confidence-score en tactiek advies. Backend + frontend klaar.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item"><div class="legend-dot dot-done"></div> Klaar</div>
+    <div class="legend-item"><div class="legend-dot dot-wip"></div> Bezig</div>
+    <div class="legend-item"><div class="legend-dot dot-next"></div> Volgende sprint</div>
+    <div class="legend-item"><div class="legend-dot dot-idea"></div> Visie / toekomst</div>
+  </div>
+
+  <!-- FUNDAMENT -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🏗️</span>
+      <span class="section-title">Fundament</span>
+      <span class="section-subtitle">Backend · Auth · Database</span>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">User registratie &amp; login</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">JWT auth, bcrypt wachtwoorden, sessie management</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Database schema (Prisma + SQLite)</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Users, Teams, Players, Matches, Transactions, Achievements</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">KYC verificatie systeem</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Tier-based identity verificatie, KYC levels</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Responsible gaming limieten</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Dagelijks/wekelijks/maandelijks, self-exclusion</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Stripe betalingen</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Storten, uitbetalen, credits systeem</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Docker + Railway deployment</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Productie-klaar, Netlify frontend + Railway backend</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FANTASY CORE -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">⚽</span>
+      <span class="section-title">Fantasy Core</span>
+      <span class="section-subtitle">Teams · Scoring · Competitie</span>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Team builder + formatie kiezer</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">4-4-2, 4-3-3, 3-5-2, 4-5-1, 5-3-2, 3-4-3 + veldzicht</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Speelronde scoring systeem</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Goals, assists, clean sheets, kaarten, rating bonussen, aanvoerder multiplicator</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Aanvoerder &amp; vice-aanvoerder</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">2× en 1.5× punten multiplicatoren</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Live wedstrijden overzicht</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Live scores, events, jouw spelers gemarkeerd</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Seizoen &amp; Speelronde management</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Entry fees, prize pools, 20% platform fee, top 20% wint</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Leaderboard</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Ranglijst per seizoen, prijs per positie berekend</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TACTISCH SYSTEEM -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🎯</span>
+      <span class="section-title">Tactisch Systeem — USP #1</span>
+      <span class="section-subtitle">Wat niemand anders heeft</span>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Tactiek keuze (6 stijlen)</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">BALANCED · HIGH_PRESS · LOW_BLOCK · TIKI_TAKA · COUNTER_ATTACK · LONG_BALL — elk met unieke positie-multiplicatoren. Frontend selector + dropdown live.</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Tactische scoring engine</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Backend: multiplicatoren geïntegreerd in scoringService. Prisma schema bijgewerkt. API endpoints live.</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Tactiek impact visualisatie</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Per-speler breakdown: basis vs. tactiek punten, bonus per positie, "beste keuze voor jouw tactiek" highlight.</div>
+      </div>
+      <div class="feature-card next">
+        <div class="fc-top"><div class="fc-title">Tactiek impact visualisatie</div><span class="tag tag-next">Volgende</span></div>
+        <div class="fc-desc">Toon per speler hoeveel punten de tactiek bijdroeg. "Tiki-Taka gaf jou +12 punten via De Bruyne."</div>
+      </div>
+      <div class="feature-card next">
+        <div class="fc-top"><div class="fc-title">Tactiek vs. tegenstander vergelijking</div><span class="tag tag-next">Volgende</span></div>
+        <div class="fc-desc">Zie in de leaderboard welke tactiek andere managers kozen en hoe goed die werkte</div>
+      </div>
+      <div class="feature-card idea">
+        <div class="fc-top"><div class="fc-title">Tactiek reputatie systeem</div><span class="tag tag-idea">Visie</span></div>
+        <div class="fc-desc">Jouw manager profiel toont je favoriete tactiek op basis van historische keuzes. "Aanvaller door de bank genomen."</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MARKETPLACE -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🏪</span>
+      <span class="section-title">Marktplaats</span>
+      <span class="section-subtitle">Kopen · Verkopen · Veilen</span>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Speler marktplaats</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Listings, biedingen, directe koop, prijsgeschiedenis</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Powerups shop</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">DOUBLE_POINTS, STREAK_BOOST — te kopen en activeren per speelronde</div>
+      </div>
+      <div class="feature-card next">
+        <div class="fc-top"><div class="fc-title">Dynamische spelerprijzen</div><span class="tag tag-next">Volgende</span></div>
+        <div class="fc-desc">Prijzen bewegen automatisch op basis van vraag en vorm. Pijs stijgt na hattrick.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DUELS & SOCIAL -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">⚔️</span>
+      <span class="section-title">Manager vs Manager — USP #2</span>
+      <span class="section-subtitle">Head-to-head duels</span>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Duel uitdaging systeem</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Uitdaag per gebruikersnaam, stel inzet in (0–500 cr), stuur bericht mee. Accepteer/weiger flow compleet.</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Tactisch duel scoring</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Beide managers: eigen tactiek, zelfde wedstrijden, eigen multiplicatoren. scoreDuel() settle de inzet automatisch.</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Duels dashboard pagina</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Overzicht van alle duels (open/afgerond), stats bar, incoming challenge banner, challenge form.</div>
+      </div>
+      <div class="feature-card idea">
+        <div class="fc-top"><div class="fc-title">Privé mini-leagues</div><span class="tag tag-idea">Visie</span></div>
+        <div class="fc-desc">Maak een league aan met vrienden. Eigen prize pool, eigen regels.</div>
+      </div>
+      <div class="feature-card idea">
+        <div class="fc-top"><div class="fc-title">Live duel chat</div><span class="tag tag-idea">Visie</span></div>
+        <div class="fc-desc">Real-time chat tijdens live wedstrijden met je tegenstander</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AI SCOUT -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-icon">🤖</span>
+      <span class="section-title">AI Scout — USP #3</span>
+      <span class="section-subtitle">Persoonlijk manager-advies</span>
+    </div>
+    <div class="features-grid">
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">AI transferadvies</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">Claude Haiku geeft 3 concrete transfers met confidence (HOOG/MIDDEL/LAAG), prijs, reden en verwachte puntwinst.</div>
+      </div>
+      <div class="feature-card done">
+        <div class="fc-top"><div class="fc-title">Tactiek aanbeveling engine</div><span class="tag tag-done">Klaar</span></div>
+        <div class="fc-desc">AI geeft tactisch advies gebaseerd op jouw huidige selectie: "stap over naar Counter-attack voor +5% op Haaland."</div>
+      </div>
+      <div class="feature-card idea">
+        <div class="fc-top"><div class="fc-title">Manager wekelijkse briefing</div><span class="tag tag-idea">Visie</span></div>
+        <div class="fc-desc">Elke gameweek een gepersonaliseerde e-mail: jouw kansen, risico's, aanbevolen actie</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Sessie 2 afgerond · Open dit bestand in je browser · Laatste update: 15 april 2026 — 62% klaar
+  </div>
+
+</div>
+</body>
+</html>

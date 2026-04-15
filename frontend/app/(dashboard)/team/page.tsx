@@ -9,6 +9,9 @@ import { PitchView } from '@/components/team/PitchView'
 import { FormationSelector } from '@/components/team/FormationSelector'
 import { PlayerModal } from '@/components/team/PlayerModal'
 import { TransferPanel } from '@/components/team/TransferPanel'
+import { TacticSelector, TacticStyle } from '@/components/team/TacticSelector'
+import { TacticImpactPanel } from '@/components/team/TacticImpactPanel'
+import { ScoutPanel } from '@/components/team/ScoutPanel'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
@@ -19,6 +22,7 @@ export default function TeamPage() {
   const { team, setFormation } = useTeamStore()
   const currentTeam = team ?? mockTeam
   const [formation, setFormationLocal] = useState<Formation>(currentTeam.formation)
+  const [tactic, setTacticLocal] = useState<TacticStyle>('BALANCED')
   const [players, setPlayers] = useState<TeamPlayer[]>(
     currentTeam.players.map(tp => ({
       ...tp,
@@ -128,6 +132,21 @@ export default function TeamPage() {
             <FormationSelector value={formation} onChange={handleFormationChange} />
           </Card>
 
+          {/* Tactic */}
+          <Card className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <p className="text-sm font-medium text-gray-400">Tactiek</p>
+              <span className="text-[10px] font-bold text-[#00FF87] uppercase tracking-wider bg-[#00FF87]/10 px-2 py-0.5 rounded-full">Nieuw</span>
+            </div>
+            <TacticSelector value={tactic} onChange={setTacticLocal} />
+          </Card>
+
+          {/* Tactic impact */}
+          <Card className="p-4">
+            <p className="text-sm font-medium text-gray-400 mb-3">Tactiek Impact</p>
+            <TacticImpactPanel tacticStyle={tactic} />
+          </Card>
+
           {/* Pitch */}
           <Card className="p-4">
             <PitchView
@@ -145,7 +164,7 @@ export default function TeamPage() {
         </div>
 
         {/* Right panel */}
-        <div className="lg:col-span-2">
+        <div className="lg:col-span-2 space-y-4">
           {showTransfer ? (
             <Card className="p-4 h-full">
               <div className="flex items-center justify-between mb-4">
@@ -256,6 +275,11 @@ export default function TeamPage() {
               </div>
             </Card>
           )}
+
+          {/* AI Scout */}
+          <Card className="p-4">
+            <ScoutPanel />
+          </Card>
         </div>
       </div>
     </div>
