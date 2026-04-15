@@ -6,6 +6,7 @@ import { useAuthStore } from '@/store/authStore'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
+import { LiveScoreBar } from '@/components/layout/LiveScoreBar'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -44,6 +45,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       {/* Main content */}
       <div className="flex-1 flex flex-col min-h-screen lg:ml-64">
         <Topbar onMenuToggle={() => setSidebarOpen(true)} />
+        <LiveScoreBar />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-8">
           {children}
         </main>
