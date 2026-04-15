@@ -206,6 +206,53 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
   }
 })
 
+// GET /leagues/:id/leaderboard — ranglijst van een privé competitie
+router.get('/:id/leaderboard', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const league = await prisma.privateLeague.findUnique({
+      where: { id: req.params.id },
+      include: {
+        members: {
+          include: {
+            user: {
+              select: {
+                id: true, username: true, tier: true,
+                teams: {
+                  orderBy: { created_at: 'desc' },
+                  take: 1,
+                  select: { id: true, name: true, total_points: true, tactic_style: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (!league) { sendError(res, 'Niet gevonden', 404); return }
+    const isMember = league.members.some(m => m.user_id === req.user!.id)
+    if (!isMember) { sendError(res, 'Geen toegang', 403); return }
+
+    const ranked = league.members
+      .map((m, i) => ({
+        rank: 0,
+        user_id: m.user.id,
+        username: m.user.username,
+        tier: m.user.tier,
+        team_name: m.user.teams[0]?.name ?? '—',
+        tactic: m.user.teams[0]?.tactic_style ?? 'BALANCED',
+        total_points: Number(m.user.teams[0]?.total_points ?? 0),
+        is_you: m.user.id === req.user!.id,
+      }))
+      .sort((a, b) => b.total_points - a.total_points)
+      .map((m, i) => ({ ...m, rank: i + 1 }))
+
+    sendSuccess(res, { league_name: league.name, leaderboard: ranked })
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 // DELETE /leagues/:id/leave — verlaten
 router.delete('/:id/leave', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
