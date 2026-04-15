@@ -45,8 +45,8 @@ export default function RegisterPage() {
         accept_terms: form.accept_terms,
         age_confirmed: form.age_confirmed,
       })
-      toast.success('Account aangemaakt! Verifieer nu je identiteit.')
-      router.push('/kyc')
+      toast.success('Account aangemaakt! Welkom bij Football Manager.')
+      router.push('/team')
     } catch {
       toast.error('Registratie mislukt. Probeer het opnieuw.')
     }

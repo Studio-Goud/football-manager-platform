@@ -7,7 +7,7 @@ import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { useAuthStore } from '@/store/authStore'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
-import { Badge } from '@/components/ui/Badge'
+import { Badge, TierBadge } from '@/components/ui/Badge'
 import { mockLeaderboard } from '@/lib/mockData'
 
 type ViewMode = 'season' | 'gameweek'
@@ -109,7 +109,7 @@ export default function LeaderboardPage() {
               transition={{ delay: podiumIdx * 0.1 }}
               className="flex flex-col items-center gap-2"
             >
-              <Avatar username={entry.user.username} tier={entry.user.tier} size="md" />
+              <Avatar fallback={entry.user.username} size="md" />
               <p className="font-bold text-xs text-center truncate w-full px-2">{entry.user.username}</p>
               <p className="text-xs text-gray-400">{entry.total_points} pt</p>
               <div className={`w-full ${heights[podiumIdx]} rounded-t-lg flex items-start justify-center pt-2`} style={{ background: `${color}20`, border: `1px solid ${color}40` }}>
@@ -159,11 +159,11 @@ export default function LeaderboardPage() {
                 </div>
 
                 {/* Avatar + name */}
-                <Avatar username={entry.user.username} tier={entry.user.tier} size="sm" />
+                <Avatar fallback={entry.user.username} size="sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className={`font-semibold text-sm ${isCurrentUser ? 'text-[#00FF87]' : ''}`}>{entry.user.username}</span>
-                    <Badge variant={entry.user.tier} className="hidden sm:inline-flex text-xs py-0" />
+                    <TierBadge tier={entry.user.tier} size="sm" />
                   </div>
                   <span className="text-xs text-gray-500">{entry.team_name}</span>
                 </div>

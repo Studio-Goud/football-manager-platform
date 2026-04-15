@@ -49,9 +49,10 @@ export function LiveScoreBar() {
   const [highlightId, setHighlightId] = useState<string | null>(null)
   const prevScores = useRef<Record<string, { h: number; a: number }>>({})
 
-  const liveMatches = matches.filter(m =>
-    m.status === 'live' || m.status === 'LIVE' || m.status === 'half_time'
-  )
+  const liveMatches = matches.filter(m => {
+    const s = (m.status as string).toLowerCase()
+    return s === 'live' || s === 'half_time'
+  })
 
   // Detect score changes → flash highlight
   useEffect(() => {

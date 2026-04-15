@@ -35,7 +35,7 @@ export default function TeamPage() {
   const [isSaving, setIsSaving] = useState(false)
 
   const budget = 100
-  const spent = players.reduce((sum, tp) => sum + (tp.player as Player | undefined)?.price ?? 0, 0)
+  const spent = players.reduce((sum, tp) => sum + ((tp.player as Player | undefined)?.price ?? 0), 0)
   const budgetRemaining = budget - spent
 
   const handleFormationChange = (f: Formation) => {
@@ -105,7 +105,7 @@ export default function TeamPage() {
           <h1 className="text-2xl font-black">Mijn Team</h1>
           <p className="text-gray-400 text-sm mt-1">Deadline: Vrijdag 18:00 · Speelronde 28</p>
         </div>
-        <Button onClick={handleSave} isLoading={isSaving} className="hidden sm:flex">
+        <Button onClick={handleSave} loading={isSaving} className="hidden sm:flex">
           <Save className="w-4 h-4 mr-2" />
           Opslaan
         </Button>
@@ -120,7 +120,7 @@ export default function TeamPage() {
             <span className="text-[#00FF87] font-bold">Resterend: {budgetRemaining.toFixed(1)} cr</span>
           </div>
         </div>
-        <ProgressBar value={spent} max={budget} color={budgetRemaining < 5 ? '#EF4444' : '#00FF87'} />
+        <ProgressBar value={spent} max={budget} color={budgetRemaining < 5 ? 'red' : 'green'} />
       </Card>
 
       <div className="grid lg:grid-cols-5 gap-6">
@@ -157,7 +157,7 @@ export default function TeamPage() {
             />
           </Card>
 
-          <Button onClick={handleSave} isLoading={isSaving} className="w-full sm:hidden">
+          <Button onClick={handleSave} loading={isSaving} className="w-full sm:hidden">
             <Save className="w-4 h-4 mr-2" />
             Team opslaan
           </Button>

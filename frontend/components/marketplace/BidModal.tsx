@@ -69,7 +69,7 @@ export function BidModal({ listing, isOpen, onClose, onBid, isBidding, userBalan
           <Button
             onClick={() => { onBid(listing.id, amount); onClose() }}
             disabled={amount < minBid || amount > userBalance}
-            isLoading={isBidding}
+            loading={isBidding}
             className="flex-1"
           >
             <Gavel className="w-4 h-4 mr-2" />

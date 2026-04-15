@@ -90,7 +90,7 @@ export function ResponsibleGaming() {
         </div>
       </div>
 
-      <Button onClick={handleSave} isLoading={isSaving} variant="secondary" className="w-full">
+      <Button onClick={handleSave} loading={isSaving} variant="secondary" className="w-full">
         Limieten opslaan
       </Button>
 

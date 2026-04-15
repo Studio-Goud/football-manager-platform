@@ -3,12 +3,16 @@
 import { useState } from 'react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
-import { useWallet } from '@/hooks/useWallet'
-import { FINANCIAL_CONFIG } from '@/lib/constants'
-import { CreditCard, Shield } from 'lucide-react'
+import { useAuthStore } from '@/store/authStore'
+import { Coins, Zap, Star, Crown } from 'lucide-react'
 import toast from 'react-hot-toast'
 
-const presets = [5, 10, 20, 50, 100]
+const PACKAGES = [
+  { id: 'starter', label: 'Starter',  price_eur: 5,  coins: 500,  bonus_pct: 0,  icon: Coins,  color: '#64748B' },
+  { id: 'pro',     label: 'Pro',      price_eur: 10, coins: 1100, bonus_pct: 10, icon: Zap,    color: '#3B82F6' },
+  { id: 'elite',   label: 'Elite',    price_eur: 25, coins: 3000, bonus_pct: 20, icon: Star,   color: '#8B5CF6' },
+  { id: 'legend',  label: 'Legend',   price_eur: 50, coins: 6500, bonus_pct: 30, icon: Crown,  color: '#F59E0B' },
+]
 
 interface DepositModalProps {
   isOpen: boolean
@@ -16,111 +20,118 @@ interface DepositModalProps {
 }
 
 export function DepositModal({ isOpen, onClose }: DepositModalProps) {
-  const { deposit, isDepositing } = useWallet()
-  const [amount, setAmount] = useState(20)
-  const [step, setStep] = useState<'amount' | 'payment' | 'success'>('amount')
+  const { updateBalance } = useAuthStore()
+  const [selected, setSelected] = useState(PACKAGES[1].id)
+  const [step, setStep] = useState<'shop' | 'processing' | 'success'>('shop')
+  const [purchased, setPurchased] = useState<typeof PACKAGES[0] | null>(null)
 
-  const handleConfirm = async () => {
-    if (amount < FINANCIAL_CONFIG.min_deposit) {
-      toast.error(`Minimale storting €${FINANCIAL_CONFIG.min_deposit}`)
-      return
-    }
+  const pkg = PACKAGES.find(p => p.id === selected)!
+
+  const handleBuy = async () => {
+    setStep('processing')
     try {
-      setStep('payment')
-      await new Promise(r => setTimeout(r, 1500))
+      const token = localStorage.getItem('access_token')
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/payments/buy`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ package_id: selected }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.message)
+
+      // Update balance in store
+      updateBalance(data.data.new_balance)
+      setPurchased(pkg)
       setStep('success')
     } catch {
-      setStep('amount')
+      toast.error('Aankoop mislukt, probeer opnieuw.')
+      setStep('shop')
     }
   }
 
-  return (
-    <Modal isOpen={isOpen} onClose={() => { onClose(); setStep('amount') }} title="Credits storten">
-      {step === 'amount' && (
-        <div className="space-y-5">
-          <p className="text-sm text-gray-400">Credits worden 1:1 omgezet naar euro's. Minimale storting €{FINANCIAL_CONFIG.min_deposit}.</p>
+  const handleClose = () => {
+    onClose()
+    setTimeout(() => setStep('shop'), 300)
+  }
 
-          {/* Preset amounts */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-3">Selecteer bedrag</label>
-            <div className="grid grid-cols-5 gap-2">
-              {presets.map(p => (
+  return (
+    <Modal isOpen={isOpen} onClose={handleClose} title="Coins kopen">
+      {step === 'shop' && (
+        <div className="space-y-5">
+          <p className="text-sm text-gray-400">
+            Coins zijn intern betaalmiddel — niet inwisselbaar voor geld.
+            Gebruik ze voor transfers, duels en power-ups.
+          </p>
+
+          <div className="grid grid-cols-2 gap-3">
+            {PACKAGES.map(p => {
+              const Icon = p.icon
+              const isActive = selected === p.id
+              return (
                 <button
-                  key={p}
-                  onClick={() => setAmount(p)}
-                  className={`py-2.5 rounded-xl text-sm font-bold transition-all ${
-                    amount === p ? 'bg-[#00FF87] text-[#0A0E1A]' : 'bg-[#1E2A45] text-gray-300 hover:bg-[#2D3A55]'
+                  key={p.id}
+                  onClick={() => setSelected(p.id)}
+                  className={`relative p-4 rounded-xl border text-left transition-all ${
+                    isActive ? 'border-[#00FF87] bg-[#00FF87]/5' : 'border-[#1E2A45] bg-[#0A0E1A] hover:border-[#2D3A55]'
                   }`}
                 >
-                  €{p}
+                  {p.bonus_pct > 0 && (
+                    <span className="absolute top-2 right-2 text-xs bg-[#00FF87] text-[#0A0E1A] font-black px-1.5 py-0.5 rounded-full">
+                      +{p.bonus_pct}%
+                    </span>
+                  )}
+                  <Icon className="w-5 h-5 mb-2" style={{ color: p.color }} />
+                  <p className="font-bold text-sm">{p.label}</p>
+                  <p className="text-[#00FF87] font-black text-lg">{p.coins.toLocaleString()}</p>
+                  <p className="text-xs text-gray-500">coins</p>
+                  <p className="text-xs text-gray-400 mt-1">€{p.price_eur}</p>
                 </button>
-              ))}
-            </div>
+              )
+            })}
           </div>
 
-          {/* Custom amount */}
-          <div>
-            <label className="block text-sm font-medium text-gray-300 mb-2">Of voer bedrag in</label>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 font-bold">€</span>
-              <input
-                type="number"
-                value={amount}
-                onChange={e => setAmount(Number(e.target.value))}
-                min={FINANCIAL_CONFIG.min_deposit}
-                max={FINANCIAL_CONFIG.max_deposit_daily}
-                className="w-full bg-[#0A0E1A] border border-[#1E2A45] rounded-xl pl-8 pr-4 py-3 text-white focus:outline-none focus:border-[#00FF87]"
-              />
-            </div>
-          </div>
-
-          {/* Summary */}
-          <div className="bg-[#0A0E1A] rounded-xl p-4 space-y-2 text-sm">
+          <div className="bg-[#0A0E1A] rounded-xl p-4 text-sm space-y-2">
             <div className="flex justify-between">
-              <span className="text-gray-400">Storting</span>
-              <span>€{amount.toFixed(2)}</span>
+              <span className="text-gray-400">Pakket</span>
+              <span>{pkg.label}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-400">Verwerkingstijd</span>
-              <span>Direct</span>
+              <span className="text-gray-400">Coins</span>
+              <span className="text-[#00FF87] font-bold">{pkg.coins.toLocaleString()}</span>
             </div>
             <div className="flex justify-between font-bold border-t border-[#1E2A45] pt-2">
-              <span>Credits ontvangen</span>
-              <span className="text-[#00FF87]">{amount} cr</span>
+              <span>Prijs</span>
+              <span>€{pkg.price_eur}</span>
             </div>
-          </div>
-
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <Shield className="w-3.5 h-3.5" />
-            <span>Betaling verwerkt via Adyen · SSL beveiligd · Daglijmiet €{FINANCIAL_CONFIG.max_deposit_daily}</span>
           </div>
 
           <div className="flex gap-3">
-            <Button onClick={handleConfirm} isLoading={isDepositing} className="flex-1">
-              <CreditCard className="w-4 h-4 mr-2" />
-              Betalen
+            <Button onClick={handleBuy} className="flex-1">
+              <Coins className="w-4 h-4 mr-2" />
+              Kopen voor €{pkg.price_eur}
             </Button>
-            <Button variant="ghost" onClick={onClose} className="flex-1">Annuleren</Button>
+            <Button variant="ghost" onClick={handleClose} className="flex-1">Annuleren</Button>
           </div>
         </div>
       )}
 
-      {step === 'payment' && (
+      {step === 'processing' && (
         <div className="text-center py-8 space-y-4">
           <div className="w-16 h-16 border-4 border-[#00FF87] border-t-transparent rounded-full animate-spin mx-auto" />
-          <p className="font-semibold">Betaling verwerken...</p>
-          <p className="text-sm text-gray-400">Even wachten terwijl we je betaling verwerken</p>
+          <p className="font-semibold">Verwerken...</p>
         </div>
       )}
 
-      {step === 'success' && (
+      {step === 'success' && purchased && (
         <div className="text-center py-6 space-y-4">
           <div className="w-16 h-16 bg-[#00FF87]/20 rounded-full flex items-center justify-center mx-auto">
             <span className="text-3xl">✓</span>
           </div>
-          <h3 className="text-xl font-bold">Betaling geslaagd!</h3>
-          <p className="text-gray-400 text-sm">{amount} credits zijn toegevoegd aan je account.</p>
-          <Button onClick={() => { onClose(); setStep('amount') }} className="w-full">Sluiten</Button>
+          <h3 className="text-xl font-bold">Gelukt!</h3>
+          <p className="text-gray-400 text-sm">
+            <span className="text-[#00FF87] font-black">{purchased.coins.toLocaleString()} coins</span> zijn toegevoegd aan je account.
+          </p>
+          <Button onClick={handleClose} className="w-full">Sluiten</Button>
         </div>
       )}
     </Modal>

@@ -32,8 +32,8 @@ export default function MarketplacePage() {
     position: positionFilter || undefined,
   })
 
-  const displayListings = listings.length > 0 ? listings : mockListings
-  const myListings = displayListings.filter(l => l.seller_id === (user?.id ?? 'user_001'))
+  const displayListings: MarketplaceListing[] = (listings.length > 0 ? listings : mockListings) as MarketplaceListing[]
+  const myListings = displayListings.filter((l: MarketplaceListing) => l.seller_id === (user?.id ?? 'user_001'))
 
   const tabs = [
     { key: 'market' as Tab, label: 'Markt', icon: List },

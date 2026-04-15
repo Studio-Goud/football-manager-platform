@@ -31,7 +31,7 @@ export function getBestValueByPosition(
   limit = 3
 ): Player[] {
   return players
-    .filter(p => p.position === position && (p.availability === 'available' || p.availability === 'AVAILABLE'))
+    .filter(p => p.position === position && (p.availability === 'available'))
     .sort((a, b) => calcValueScore(b) - calcValueScore(a))
     .slice(0, limit)
 }
@@ -41,7 +41,7 @@ export function getBestValueByPosition(
  */
 export function getScoutTips(players: Player[], limit = 5): Player[] {
   return players
-    .filter(p => p.availability === 'available' || p.availability === 'AVAILABLE')
+    .filter(p => p.availability === 'available')
     .sort((a, b) => calcValueScore(b) - calcValueScore(a))
     .slice(0, limit)
 }

@@ -86,7 +86,7 @@ export function WithdrawModal({ isOpen, onClose }: WithdrawModalProps) {
         <div className="flex gap-3">
           <Button
             onClick={() => { withdraw({ amountCredits: amount, bankAccount: iban }); onClose() }}
-            isLoading={isWithdrawing}
+            loading={isWithdrawing}
             disabled={!iban || amount < FINANCIAL_CONFIG.min_withdrawal || amount > (user?.balance_credits ?? 0)}
             className="flex-1"
           >

@@ -1,10 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Swords, Trophy, Clock, XCircle, Send, ChevronRight, Shield, Zap, Target, Flame } from 'lucide-react'
+import { Swords, Trophy, Clock, XCircle, Send, Target, Zap, Flame } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
+import { useAuthStore } from '@/store/authStore'
+import api from '@/lib/api'
 import toast from 'react-hot-toast'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -28,60 +30,6 @@ interface Duel {
   me: { id: string; username: string; tier: string }
   opponent: { id: string; username: string; tier: string }
 }
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-
-const MOCK_DUELS: Duel[] = [
-  {
-    id: '1',
-    status: 'PENDING',
-    stake: 50,
-    gameweek_id: 28,
-    message: 'Kom op dan 😏',
-    created_at: new Date(Date.now() - 1000 * 60 * 20).toISOString(),
-    i_am: 'opponent',
-    my_tactic: 'TIKI_TAKA',
-    opponent_tactic: 'HIGH_PRESS',
-    my_points: 0,
-    opponent_points: 0,
-    winner_id: null,
-    i_won: false,
-    me:       { id: '2', username: 'jij', tier: 'GOLD' },
-    opponent: { id: '1', username: 'Xavi2023', tier: 'GOLD' },
-  },
-  {
-    id: '2',
-    status: 'COMPLETED',
-    stake: 100,
-    gameweek_id: 27,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    i_am: 'challenger',
-    my_tactic: 'COUNTER_ATTACK',
-    opponent_tactic: 'LOW_BLOCK',
-    my_points: 87.5,
-    opponent_points: 74.2,
-    winner_id: 'me',
-    i_won: true,
-    me:       { id: '2', username: 'jij', tier: 'GOLD' },
-    opponent: { id: '3', username: 'PepFan99', tier: 'SILVER' },
-  },
-  {
-    id: '3',
-    status: 'ACCEPTED',
-    stake: 25,
-    gameweek_id: 28,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    i_am: 'challenger',
-    my_tactic: 'HIGH_PRESS',
-    opponent_tactic: 'BALANCED',
-    my_points: 0,
-    opponent_points: 0,
-    winner_id: null,
-    i_won: false,
-    me:       { id: '2', username: 'jij', tier: 'GOLD' },
-    opponent: { id: '4', username: 'KloppIsGod', tier: 'BRONZE' },
-  },
-]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -182,7 +130,7 @@ function DuelCard({ duel, onAccept, onDecline }: { duel: Duel; onAccept: (id: st
       {/* Message */}
       {duel.message && (
         <p className="text-xs text-gray-500 italic text-center mt-3 border-t border-[#1E2A45] pt-3">
-          "{duel.message}"
+          &ldquo;{duel.message}&rdquo;
         </p>
       )}
 
@@ -206,7 +154,7 @@ function DuelCard({ duel, onAccept, onDecline }: { duel: Duel; onAccept: (id: st
 
 // ── Challenge form ────────────────────────────────────────────────────────────
 
-function ChallengeForm({ onSend }: { onSend: (data: { username: string; stake: number; message: string }) => void }) {
+function ChallengeForm({ onSend }: { onSend: (data: { username: string; stake: number; message: string }) => Promise<void> }) {
   const [username, setUsername] = useState('')
   const [stake, setStake] = useState(0)
   const [message, setMessage] = useState('')
@@ -216,10 +164,12 @@ function ChallengeForm({ onSend }: { onSend: (data: { username: string; stake: n
     e.preventDefault()
     if (!username.trim()) { toast.error('Voer een gebruikersnaam in'); return }
     setSending(true)
-    await new Promise(r => setTimeout(r, 600))
-    onSend({ username: username.trim(), stake, message })
-    setUsername(''); setStake(0); setMessage('')
-    setSending(false)
+    try {
+      await onSend({ username: username.trim(), stake, message })
+      setUsername(''); setStake(0); setMessage('')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -257,7 +207,7 @@ function ChallengeForm({ onSend }: { onSend: (data: { username: string; stake: n
           className="w-full bg-[#0A0E1A] border border-[#1E2A45] rounded-xl px-3 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#00FF87]/50"
         />
       </div>
-      <Button type="submit" isLoading={sending} className="w-full">
+      <Button type="submit" loading={sending} className="w-full">
         <Send className="w-4 h-4 mr-2" />
         Uitdaging sturen
       </Button>
@@ -276,10 +226,10 @@ function StatsBar({ duels }: { duels: Duel[] }) {
   return (
     <div className="grid grid-cols-4 gap-3">
       {[
-        { icon: <Trophy className="w-4 h-4" />, val: wins,           lbl: 'Gewonnen',  color: 'text-green-400' },
-        { icon: <XCircle className="w-4 h-4" />,val: losses,         lbl: 'Verloren',  color: 'text-red-400' },
-        { icon: <Swords className="w-4 h-4" />, val: completed.length,lbl: 'Gespeeld', color: 'text-white' },
-        { icon: <Zap className="w-4 h-4" />,    val: `${earned} cr`, lbl: 'Verdiend',  color: 'text-[#00FF87]' },
+        { icon: <Trophy className="w-4 h-4" />, val: wins,            lbl: 'Gewonnen',  color: 'text-green-400' },
+        { icon: <XCircle className="w-4 h-4" />,val: losses,          lbl: 'Verloren',  color: 'text-red-400' },
+        { icon: <Swords className="w-4 h-4" />, val: completed.length, lbl: 'Gespeeld', color: 'text-white' },
+        { icon: <Zap className="w-4 h-4" />,    val: `${earned} cr`,  lbl: 'Verdiend',  color: 'text-[#00FF87]' },
       ].map((s, i) => (
         <div key={i} className="bg-[#111827] border border-[#1E2A45] rounded-xl p-3 text-center">
           <div className={`${s.color} flex justify-center mb-1`}>{s.icon}</div>
@@ -294,23 +244,60 @@ function StatsBar({ duels }: { duels: Duel[] }) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 
 export default function DuelsPage() {
-  const [duels, setDuels] = useState<Duel[]>(MOCK_DUELS)
+  const { token } = useAuthStore()
+  const [duels, setDuels] = useState<Duel[]>([])
+  const [loading, setLoading] = useState(true)
   const [showChallenge, setShowChallenge] = useState(false)
   const [filter, setFilter] = useState<'all' | 'open' | 'done'>('all')
 
-  const handleSend = (data: { username: string; stake: number; message: string }) => {
-    toast.success(`Uitdaging gestuurd naar ${data.username}!`)
-    setShowChallenge(false)
+  const loadDuels = useCallback(async () => {
+    if (!token) return
+    try {
+      const res = await api.get('/duels')
+      setDuels(res.data.data ?? [])
+    } catch {
+      // No team yet or other error — just show empty
+      setDuels([])
+    } finally {
+      setLoading(false)
+    }
+  }, [token])
+
+  useEffect(() => { loadDuels() }, [loadDuels])
+
+  const handleSend = async (data: { username: string; stake: number; message: string }) => {
+    try {
+      await api.post('/duels', {
+        opponent_username: data.username,
+        stake: data.stake,
+        message: data.message || undefined,
+      })
+      toast.success(`Uitdaging gestuurd naar ${data.username}!`)
+      setShowChallenge(false)
+      loadDuels()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Versturen mislukt')
+    }
   }
 
-  const handleAccept = (id: string) => {
-    setDuels(prev => prev.map(d => d.id === id ? { ...d, status: 'ACCEPTED' as DuelStatus } : d))
-    toast.success('Duel geaccepteerd! De strijd begint.')
+  const handleAccept = async (id: string) => {
+    try {
+      await api.patch(`/duels/${id}/respond`, { action: 'ACCEPT' })
+      toast.success('Duel geaccepteerd! De strijd begint.')
+      loadDuels()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Accepteren mislukt')
+    }
   }
 
-  const handleDecline = (id: string) => {
-    setDuels(prev => prev.map(d => d.id === id ? { ...d, status: 'DECLINED' as DuelStatus } : d))
-    toast('Duel geweigerd.')
+  const handleDecline = async (id: string) => {
+    try {
+      await api.patch(`/duels/${id}/respond`, { action: 'DECLINE' })
+      toast('Duel geweigerd.')
+      loadDuels()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Weigeren mislukt')
+    }
   }
 
   const filtered = duels.filter(d =>
@@ -407,7 +394,13 @@ export default function DuelsPage() {
 
       {/* Duel list */}
       <div className="space-y-3">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => (
+              <div key={i} className="bg-[#111827] border border-[#1E2A45] rounded-2xl p-4 animate-pulse h-32" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="text-center py-12 text-gray-500">
             <Swords className="w-10 h-10 mx-auto mb-3 opacity-30" />
             <p className="font-semibold">Geen duels gevonden</p>

@@ -86,7 +86,7 @@ export default function PowerupsPage() {
                 {/* Buy button */}
                 <Button
                   onClick={() => handlePurchase(type)}
-                  isLoading={purchasing === type}
+                  loading={purchasing === type}
                   disabled={!canAfford}
                   variant={canAfford ? 'primary' : 'ghost'}
                   className="w-full"

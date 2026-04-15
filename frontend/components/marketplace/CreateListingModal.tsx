@@ -115,7 +115,7 @@ export function CreateListingModal({ player, isOpen, onClose, onCreate, isCreati
         <div className="flex gap-3">
           <Button
             onClick={() => { onCreate({ player_id: player.id, price, listing_type: listingType, duration_hours: duration }); onClose() }}
-            isLoading={isCreating}
+            loading={isCreating}
             className="flex-1"
           >
             Listing aanmaken

@@ -26,15 +26,18 @@ export function useLive() {
   useEffect(() => {
     const socket = getSocket()
 
-    socket.on('match:event', (event: MatchEvent & { match_id: string }) => {
-      addEvent(event.match_id, event)
+    socket.on('match:event', (...args: unknown[]) => {
+      const event = args[0] as MatchEvent & { match_id: string }
+      addEvent(event)
     })
 
-    socket.on('match:score', (data: { match_id: string; home_score: number; away_score: number; minute: number }) => {
+    socket.on('match:score', (...args: unknown[]) => {
+      const data = args[0] as { match_id: string; home_score: number; away_score: number; minute: number }
       updateMatchScore(data.match_id, data.home_score, data.away_score, data.minute)
     })
 
-    socket.on('user:points', (data: { total_points: number; delta: number; event: MatchEvent }) => {
+    socket.on('user:points', (...args: unknown[]) => {
+      const data = args[0] as { total_points: number; delta: number; event: MatchEvent }
       setLivePoints(data.total_points)
     })
 

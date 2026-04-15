@@ -144,11 +144,11 @@ export function PlayerDetailModal({ player, onClose, onAddToTeam, showAddButton 
                   </span>
                 )}
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  player.availability === 'available' || player.availability === 'AVAILABLE'
+                  player.availability === 'available'
                     ? 'bg-[#00FF87]/20 text-[#00FF87]'
                     : 'bg-red-500/20 text-red-400'
                 }`}>
-                  {player.availability === 'available' || player.availability === 'AVAILABLE' ? '✓ Beschikbaar' : '✗ Geblesseerd'}
+                  {player.availability === 'available' ? '✓ Beschikbaar' : '✗ Geblesseerd'}
                 </span>
               </div>
             </div>

@@ -54,7 +54,7 @@ export function TierProgress({ currentTier, totalInvested }: TierProgressProps) 
             <span>{config.label}</span>
             <span style={{ color: nextConfig.color }}>{nextConfig.label}</span>
           </div>
-          <ProgressBar value={progressToNext} max={100} color={nextConfig.color} />
+          <ProgressBar value={progressToNext} max={100} color="gradient" />
           <p className="text-xs text-gray-500 mt-1.5">
             €{Math.max(0, nextConfig.min_invested - totalInvested).toFixed(0)} meer investeren voor {nextConfig.label}
           </p>

@@ -192,7 +192,7 @@ export function ScoutPanel() {
             Onze AI analyseert jouw team, tactiek en aankomende fixtures.<br />
             Krijg 3 concrete transfertips op maat.
           </p>
-          <Button onClick={generate} isLoading={loading} className="mx-auto">
+          <Button onClick={generate} loading={loading} className="mx-auto">
             Analyse starten
           </Button>
         </div>

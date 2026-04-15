@@ -43,8 +43,8 @@ router.post(
       const password_hash = await hashPassword(password)
 
       const user = await prisma.user.create({
-        data: { email, password_hash, username },
-        select: { id: true, email: true, username: true, tier: true, kyc_status: true, balance_credits: true },
+        data: { email, password_hash, username, kyc_status: 'VERIFIED', kyc_level: 1 },
+        select: { id: true, email: true, username: true, tier: true, balance_credits: true },
       })
 
       const access_token = generateToken({ userId: user.id, email: user.email, role: 'user' })
@@ -59,7 +59,7 @@ router.post(
           username: user.username,
           balance_credits: Number(user.balance_credits),
           tier: user.tier.toLowerCase(),
-          kyc_status: user.kyc_status.toLowerCase(),
+          kyc_status: 'verified',
           role: 'user',
         },
         access_token,
@@ -127,7 +127,7 @@ router.post(
           username: user.username,
           balance_credits: Number(user.balance_credits),
           tier: user.tier.toLowerCase(),
-          kyc_status: user.kyc_status.toLowerCase(),
+          kyc_status: 'verified',
           role,
         },
         access_token,

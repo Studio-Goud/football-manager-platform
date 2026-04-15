@@ -34,7 +34,7 @@ export function LiveLeaderboard({ entries, currentUserId }: LiveLeaderboardProps
             </span>
 
             {/* Avatar */}
-            <Avatar username={entry.user.username} tier={entry.user.tier} size="sm" />
+            <Avatar fallback={entry.user.username} size="sm" />
 
             {/* Name & points */}
             <div className="flex-1 min-w-0">

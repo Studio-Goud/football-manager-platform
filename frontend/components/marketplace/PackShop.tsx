@@ -77,7 +77,7 @@ export function PackShop() {
           </div>
           <Button
             onClick={() => handleOpenPack(type)}
-            isLoading={opening === type}
+            loading={opening === type}
             className="w-full mt-3 text-sm"
             variant={type === 'elite' ? 'primary' : 'secondary'}
           >

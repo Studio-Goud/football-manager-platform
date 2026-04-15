@@ -2,9 +2,10 @@
 
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Plus, LogIn, Trophy, Copy, Check, Crown, Globe, Lock } from 'lucide-react'
+import { Users, Plus, LogIn, Trophy, Copy, Check, Crown, Globe, Lock, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { useAuthStore } from '@/store/authStore'
+import Link from 'next/link'
 import toast from 'react-hot-toast'
 
 interface PrivateLeague {
@@ -91,6 +92,18 @@ function LeagueCard({ league, onRefresh }: { league: PrivateLeague; onRefresh: (
           <p className="text-xs text-gray-500 pl-11">+{league.member_count - 5} anderen</p>
         )}
       </div>
+
+      {/* Leaderboard link */}
+      <Link
+        href={`/leagues/${league.id}`}
+        className="flex items-center justify-between px-4 py-2.5 bg-[#00FF87]/5 border border-[#00FF87]/20 rounded-xl hover:bg-[#00FF87]/10 transition-colors"
+      >
+        <div className="flex items-center gap-2 text-sm font-bold text-[#00FF87]">
+          <Trophy className="w-4 h-4" />
+          Bekijk ranglijst
+        </div>
+        <ChevronRight className="w-4 h-4 text-[#00FF87]" />
+      </Link>
     </motion.div>
   )
 }

@@ -13,7 +13,7 @@ export function useTeam(seasonId?: string) {
       return res.data.data
     },
     enabled: true,
-  } as Parameters<typeof useQuery>[0])
+  })
 
   const saveMutation = useMutation({
     mutationFn: async (players: TeamPlayer[]) => {

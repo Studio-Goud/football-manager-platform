@@ -31,7 +31,7 @@ export const authenticate = async (
     // Check if user exists and isn't suspended
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
-      select: { id: true, email: true, username: true, is_admin: true, is_suspended: true, role: true },
+      select: { id: true, email: true, username: true, is_admin: true, is_suspended: true },
     } as Parameters<typeof prisma.user.findUnique>[0])
 
     if (!user) {

@@ -96,7 +96,7 @@ export function ListingCard({ listing, onBuy, onBid, onViewPlayer, isBuying, isO
               Bieden
             </Button>
           ) : (
-            <Button onClick={onBuy} isLoading={isBuying} className="flex-1 text-sm py-2">
+            <Button onClick={onBuy} loading={isBuying} className="flex-1 text-sm py-2">
               <ShoppingCart className="w-3.5 h-3.5 mr-1" />
               Kopen
             </Button>
