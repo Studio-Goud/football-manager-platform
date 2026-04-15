@@ -16,7 +16,7 @@ const statCards = (user: typeof mockCurrentUser, livePoints: number) => [
   { label: 'Huidige Rang', value: '#23', icon: Trophy, color: '#FFD700', delta: '+5', positive: true },
   { label: 'Totale Punten', value: '1.284', icon: Star, color: '#00FF87', delta: '+47 dit GW', positive: true },
   { label: 'Live Punten', value: String(livePoints), icon: Zap, color: '#3B82F6', delta: 'Live', positive: true },
-  { label: 'Credits', value: formatCredits(user.balance_credits), icon: TrendingUp, color: '#9B59B6', delta: 'Saldo', positive: true },
+  { label: 'Coins', value: Number(user.balance_credits).toLocaleString(), icon: TrendingUp, color: '#9B59B6', delta: 'Saldo', positive: true },
 ]
 
 export default function DashboardPage() {
@@ -119,32 +119,31 @@ export default function DashboardPage() {
           </div>
         </Card>
 
-        {/* Prize pool */}
+        {/* Quick actions */}
         <Card className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-lg">Prijzenpot</h2>
-            <span className="text-[#00FF87] font-black text-lg">€12.480</span>
-          </div>
-          <div className="space-y-3 text-sm">
+          <h2 className="font-bold text-lg mb-4">Snel starten</h2>
+          <div className="space-y-3">
             {[
-              { label: '1e plaats', pct: '30%', amount: '€3.744' },
-              { label: '2e plaats', pct: '20%', amount: '€2.496' },
-              { label: '3e plaats', pct: '12%', amount: '€1.498' },
-              { label: 'Top 10', pct: '38% verdeeld', amount: '€4.742' },
-            ].map((row) => (
-              <div key={row.label} className="flex items-center justify-between">
-                <span className="text-gray-400">{row.label}</span>
-                <div className="text-right">
-                  <span className="text-white font-medium">{row.amount}</span>
-                  <span className="text-gray-600 text-xs ml-1">({row.pct})</span>
+              { href: '/leagues',     label: 'Vrienden uitdagen',  sub: 'Privé competitie aanmaken', color: '#00FF87',  icon: '🏆' },
+              { href: '/duels',       label: 'Duel starten',       sub: 'Head-to-head tegen een vriend', color: '#3B82F6', icon: '⚔️' },
+              { href: '/marketplace', label: 'Transfermarkt',      sub: 'Spelers kopen & verkopen',  color: '#8B5CF6',  icon: '🛒' },
+              { href: '/team',        label: 'Team beheren',       sub: 'Opstelling & tactiek',       color: '#F59E0B',  icon: '👥' },
+            ].map(action => (
+              <Link
+                key={action.href}
+                href={action.href}
+                className="flex items-center gap-3 p-3 rounded-xl bg-[#0A0E1A] hover:bg-[#162040] transition-colors group"
+              >
+                <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl" style={{ backgroundColor: `${action.color}15` }}>
+                  {action.icon}
                 </div>
-              </div>
+                <div className="flex-1">
+                  <p className="text-sm font-bold">{action.label}</p>
+                  <p className="text-xs text-gray-500">{action.sub}</p>
+                </div>
+                <ArrowUp className="w-4 h-4 text-gray-600 group-hover:text-gray-400 rotate-90 transition-colors" />
+              </Link>
             ))}
-          </div>
-          <div className="mt-4 pt-4 border-t border-[#1E2A45]">
-            <p className="text-xs text-gray-500 mb-2">Mijn huidige prijs op rang #23</p>
-            <ProgressBar value={23} max={100} color="#00FF87" />
-            <p className="text-[#00FF87] font-bold mt-2">€169 (top 20%)</p>
           </div>
         </Card>
       </div>
