@@ -10,26 +10,22 @@ router.use(authenticate, requireAdmin)
 // GET /admin/stats
 router.get('/stats', async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const [totalUsers, totalDeposits, totalPayouts, pendingKyc, activeThisWeek] = await Promise.all([
+    const [totalUsers, totalTeams, totalPlayers, activeMatches, totalTransactions, coinSum] = await Promise.all([
       prisma.user.count(),
-      prisma.transaction.aggregate({ where: { type: 'DEPOSIT', status: 'COMPLETED' }, _sum: { amount: true } }),
-      prisma.transaction.aggregate({ where: { type: 'WITHDRAWAL', status: 'COMPLETED' }, _sum: { amount: true } }),
-      prisma.user.count({ where: { kyc_status: 'SUBMITTED' } }),
-      prisma.user.count({ where: { last_active: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } } }),
+      prisma.team.count(),
+      prisma.player.count(),
+      prisma.match.count({ where: { status: 'live' } }),
+      prisma.transaction.count(),
+      prisma.user.aggregate({ _sum: { balance_credits: true } }),
     ])
-
-    const deposits = Math.abs(Number(totalDeposits._sum.amount ?? 0))
-    const payouts = Math.abs(Number(totalPayouts._sum.amount ?? 0))
-    const platformRevenue = deposits * 0.2 - payouts
 
     sendSuccess(res, {
       total_users: totalUsers,
-      active_this_week: activeThisWeek,
-      total_deposits: deposits,
-      total_payouts: payouts,
-      platform_revenue: platformRevenue,
-      pending_kyc: pendingKyc,
-      suspicious_activity_count: 3, // TODO: real detection
+      total_teams: totalTeams,
+      total_players: totalPlayers,
+      active_matches: activeMatches,
+      total_transactions: totalTransactions,
+      total_coins_in_circulation: Number(coinSum._sum.balance_credits ?? 0),
     })
   } catch {
     sendError(res, 'Ophalen mislukt', 500)
@@ -38,7 +34,7 @@ router.get('/stats', async (_req: AuthRequest, res: Response): Promise<void> => 
 
 // GET /admin/users
 router.get('/users', async (req: AuthRequest, res: Response): Promise<void> => {
-  const { search, page = '1', per_page = '20', kyc_status } = req.query
+  const { search, page = '1', per_page = '20' } = req.query
   const pageNum = Math.max(1, parseInt(page as string))
   const perPageNum = Math.min(50, parseInt(per_page as string))
 
@@ -46,18 +42,17 @@ router.get('/users', async (req: AuthRequest, res: Response): Promise<void> => {
     const where: Record<string, unknown> = {}
     if (search) {
       where.OR = [
-        { username: { contains: search, mode: 'insensitive' } },
-        { email: { contains: search, mode: 'insensitive' } },
+        { username: { contains: search as string } },
+        { email: { contains: search as string } },
       ]
     }
-    if (kyc_status) where.kyc_status = (kyc_status as string).toUpperCase()
 
     const [users, total] = await Promise.all([
       prisma.user.findMany({
         where,
         select: {
           id: true, email: true, username: true, tier: true,
-          kyc_status: true, balance_credits: true, is_suspended: true,
+          balance_credits: true, is_admin: true, is_suspended: true,
           created_at: true, last_active: true,
         },
         orderBy: { created_at: 'desc' },
@@ -67,7 +62,7 @@ router.get('/users', async (req: AuthRequest, res: Response): Promise<void> => {
       prisma.user.count({ where }),
     ])
 
-    sendSuccess(res, { data: users, total })
+    sendSuccess(res, users)
   } catch {
     sendError(res, 'Ophalen mislukt', 500)
   }
@@ -76,36 +71,57 @@ router.get('/users', async (req: AuthRequest, res: Response): Promise<void> => {
 // PUT /admin/users/:id/suspend
 router.put('/users/:id/suspend', async (req: AuthRequest, res: Response): Promise<void> => {
   const { suspended } = req.body
-
   try {
     await prisma.user.update({
       where: { id: req.params.id },
       data: { is_suspended: suspended ?? true },
     })
-
     sendSuccess(res, null, suspended ? 'Account gesuspendeerd' : 'Suspensie opgeheven')
   } catch {
     sendError(res, 'Wijzigen mislukt', 500)
   }
 })
 
+// POST /admin/users/:id/coins — geef coins aan gebruiker
+router.post('/users/:id/coins', async (req: AuthRequest, res: Response): Promise<void> => {
+  const { amount } = req.body
+  if (!amount || isNaN(Number(amount))) { sendError(res, 'Ongeldig bedrag', 400); return }
+  try {
+    const user = await prisma.user.update({
+      where: { id: req.params.id },
+      data: { balance_credits: { increment: Number(amount) } },
+      select: { id: true, username: true, balance_credits: true },
+    })
+    await prisma.transaction.create({
+      data: {
+        user_id: req.params.id,
+        type: 'BONUS',
+        amount: Number(amount),
+        status: 'COMPLETED',
+        description: `Admin bonus: ${amount} coins`,
+      },
+    } as Parameters<typeof prisma.transaction.create>[0])
+    sendSuccess(res, user, `${amount} coins toegevoegd aan ${user.username}`)
+  } catch {
+    sendError(res, 'Coins geven mislukt', 500)
+  }
+})
+
 // POST /admin/seasons
 router.post('/seasons', async (req: AuthRequest, res: Response): Promise<void> => {
   const { name, competition, start_date, end_date, entry_fee_min, entry_fee_max } = req.body
-
   try {
     const season = await prisma.season.create({
       data: {
-        name,
-        competition,
-        start_date: new Date(start_date),
-        end_date: new Date(end_date),
-        entry_fee_min,
-        entry_fee_max,
+        name: name ?? `Seizoen ${new Date().getFullYear()}`,
+        competition: competition ?? 'eredivisie',
+        start_date: start_date ? new Date(start_date) : new Date(),
+        end_date: end_date ? new Date(end_date) : new Date(Date.now() + 90 * 24 * 3600 * 1000),
+        entry_fee_min: entry_fee_min ?? 0,
+        entry_fee_max: entry_fee_max ?? 0,
         status: 'UPCOMING',
       },
     })
-
     sendSuccess(res, season, 'Seizoen aangemaakt', 201)
   } catch {
     sendError(res, 'Aanmaken mislukt', 500)
