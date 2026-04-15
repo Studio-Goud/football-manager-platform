@@ -10,7 +10,7 @@
     "db:seed": "ts-node prisma/seed.ts",
     "db:studio": "prisma studio",
     "db:generate": "prisma generate",
-    "postinstall": "prisma generate",
+    "postinstall": "prisma generate --schema=./prisma/schema.prisma",
     "railway:start": "prisma migrate deploy && node dist/index.js"
   },
   "dependencies": {
@@ -34,6 +34,9 @@
     "uuid": "^10.0.0",
     "winston": "^3.13.0",
     "zod": "^3.23.8"
+  },
+  "prisma": {
+    "schema": "./prisma/schema.prisma"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",
