@@ -76,9 +76,13 @@ export default function AdminPage() {
     }
   }
 
-  const syncPlayers = () => doAction('Spelers synchroniseren', () =>
-    api.post('/admin/sync-players')
-  )
+  const syncPlayers = () => doAction('Spelers synchroniseren', async () => {
+    const res = await api.post('/admin/sync-players/await')
+    const r = res.data?.data
+    if (r?.players_synced != null) {
+      toast.success(`✅ ${r.players_synced} spelers · ${r.injured_updated} blessures · ${r.api_calls_used} API calls`, { duration: 6000 })
+    }
+  })
 
   const createSeason = () => doAction('Seizoen aanmaken', () =>
     api.post('/admin/seasons', { name: `Seizoen ${new Date().getFullYear()}` })

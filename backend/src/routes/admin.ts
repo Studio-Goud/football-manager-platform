@@ -2,6 +2,8 @@ import { Router, Response } from 'express'
 import prisma from '../config/database'
 import { sendSuccess, sendError } from '../utils/apiResponse'
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth'
+import { syncEredivisiePlayers } from '../services/syncPlayersService'
+import logger from '../config/logger'
 
 const router = Router()
 
@@ -14,7 +16,7 @@ router.get('/stats', async (_req: AuthRequest, res: Response): Promise<void> => 
       prisma.user.count(),
       prisma.team.count(),
       prisma.player.count(),
-      prisma.match.count({ where: { status: 'live' } }),
+      prisma.match.count({ where: { status: 'LIVE' } }),
       prisma.transaction.count(),
       prisma.user.aggregate({ _sum: { balance_credits: true } }),
     ])
@@ -47,7 +49,7 @@ router.get('/users', async (req: AuthRequest, res: Response): Promise<void> => {
       ]
     }
 
-    const [users, total] = await Promise.all([
+    const [users] = await Promise.all([
       prisma.user.findMany({
         where,
         select: {
@@ -82,7 +84,7 @@ router.put('/users/:id/suspend', async (req: AuthRequest, res: Response): Promis
   }
 })
 
-// POST /admin/users/:id/coins — geef coins aan gebruiker
+// POST /admin/users/:id/coins
 router.post('/users/:id/coins', async (req: AuthRequest, res: Response): Promise<void> => {
   const { amount } = req.body
   if (!amount || isNaN(Number(amount))) { sendError(res, 'Ongeldig bedrag', 400); return }
@@ -97,10 +99,11 @@ router.post('/users/:id/coins', async (req: AuthRequest, res: Response): Promise
         user_id: req.params.id,
         type: 'BONUS',
         amount: Number(amount),
+        credits_amount: Number(amount),
         status: 'COMPLETED',
         description: `Admin bonus: ${amount} coins`,
       },
-    } as Parameters<typeof prisma.transaction.create>[0])
+    })
     sendSuccess(res, user, `${amount} coins toegevoegd aan ${user.username}`)
   } catch {
     sendError(res, 'Coins geven mislukt', 500)
@@ -126,6 +129,27 @@ router.post('/seasons', async (req: AuthRequest, res: Response): Promise<void> =
   } catch {
     sendError(res, 'Aanmaken mislukt', 500)
   }
+})
+
+// POST /admin/sync-players/await — sync en wacht op resultaat
+router.post('/sync-players/await', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    logger.info('Admin: speler sync gestart')
+    const result = await syncEredivisiePlayers()
+    sendSuccess(res, result, `Sync klaar: ${result.players_synced} spelers, ${result.injured_updated} blessures bijgewerkt`)
+  } catch {
+    sendError(res, 'Sync mislukt', 500)
+  }
+})
+
+// POST /admin/sync-players — async versie (respond direct)
+router.post('/sync-players', async (_req: AuthRequest, res: Response): Promise<void> => {
+  res.json({ success: true, message: 'Sync gestart op achtergrond (~30 sec)' })
+  syncEredivisiePlayers().then(result => {
+    logger.info('Achtergrond sync voltooid', result)
+  }).catch(err => {
+    logger.error('Achtergrond sync mislukt', { err })
+  })
 })
 
 export default router
