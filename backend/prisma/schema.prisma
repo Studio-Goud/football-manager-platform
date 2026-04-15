@@ -35,8 +35,9 @@ model User {
   sessions           UserSession[]
   achievements       UserAchievement[]
   responsible_gaming ResponsibleGaming?
-  duels_as_challenger Duel[] @relation("DuelChallenger")
-  duels_as_opponent   Duel[] @relation("DuelOpponent")
+  duels_as_challenger  Duel[]                @relation("DuelChallenger")
+  duels_as_opponent    Duel[]                @relation("DuelOpponent")
+  private_league_memberships PrivateLeagueMember[]
 
   @@map("users")
 }
@@ -77,24 +78,41 @@ model Gameweek {
   @@map("gameweeks")
 }
 
-model Player {
-  id            Int      @id @default(autoincrement())
-  external_id   String   @unique
-  name          String
-  display_name  String
-  club          String
-  club_id       Int
-  position      String
-  nationality   String?
-  photo_url     String?
-  price         Decimal  @default(5)
-  form          Decimal  @default(5)
-  total_points  Decimal  @default(0)
-  availability  String   @default("AVAILABLE")
-  injury_return DateTime?
-  created_at    DateTime @default(now())
-  updated_at    DateTime @updatedAt
+model League {
+  id          Int      @id @default(autoincrement())
+  name        String
+  country     String
+  external_id String   @unique
+  logo_url    String?
+  is_active   Boolean  @default(true)
+  created_at  DateTime @default(now())
 
+  players Player[]
+
+  @@map("leagues")
+}
+
+model Player {
+  id                  Int      @id @default(autoincrement())
+  external_id         String   @unique
+  name                String
+  display_name        String
+  club                String
+  club_id             Int
+  position            String
+  nationality         String?
+  photo_url           String?
+  league_id           Int?
+  league_external_id  String?
+  price               Decimal  @default(5)
+  form                Decimal  @default(5)
+  total_points        Decimal  @default(0)
+  availability        String   @default("AVAILABLE")
+  injury_return       DateTime?
+  created_at          DateTime @default(now())
+  updated_at          DateTime @updatedAt
+
+  league             League?            @relation(fields: [league_id], references: [id])
   team_players       TeamPlayer[]
   match_performances MatchPerformance[]
   listings           MarketplaceListing[]
@@ -353,6 +371,37 @@ model Duel {
   gameweek        Gameweek @relation(fields: [gameweek_id], references: [id])
 
   @@map("duels")
+}
+
+model PrivateLeague {
+  id             String   @id @default(uuid())
+  name           String
+  code           String   @unique
+  owner_id       String
+  max_members    Int      @default(20)
+  league_filter  String?  // null = alle liga's, "eredivisie" = alleen eredivisie etc.
+  allow_mixed    Boolean  @default(true)
+  season_id      Int?
+  created_at     DateTime @default(now())
+  updated_at     DateTime @updatedAt
+
+  members PrivateLeagueMember[]
+
+  @@map("private_leagues")
+}
+
+model PrivateLeagueMember {
+  id                Int      @id @default(autoincrement())
+  private_league_id String
+  user_id           String
+  team_id           String?
+  joined_at         DateTime @default(now())
+
+  private_league PrivateLeague @relation(fields: [private_league_id], references: [id])
+  user           User          @relation(fields: [user_id], references: [id])
+
+  @@unique([private_league_id, user_id])
+  @@map("private_league_members")
 }
 
 model ResponsibleGaming {

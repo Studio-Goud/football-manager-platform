@@ -12,9 +12,9 @@ import {
   Zap,
   User,
   Shield,
-  ChevronRight,
   X,
   Swords,
+  Globe,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
@@ -37,6 +37,7 @@ const navItems: NavItem[] = [
   { label: 'Live Wedstrijden', href: '/live', icon: Radio },
   { label: 'Ranglijst', href: '/leaderboard', icon: Trophy },
   { label: 'Duels', href: '/duels', icon: Swords, badge: 1 },
+  { label: 'Competities', href: '/leagues', icon: Globe },
   { label: 'Power-ups', href: '/powerups', icon: Zap },
   { label: 'Profiel', href: '/profile', icon: User },
   { label: 'Admin', href: '/admin', icon: Shield, adminOnly: true },

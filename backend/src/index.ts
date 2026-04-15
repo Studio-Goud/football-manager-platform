@@ -22,10 +22,12 @@ import matchRoutes from './routes/matches'
 import powerupRoutes from './routes/powerups'
 import adminRoutes from './routes/admin'
 import duelRoutes from './routes/duels'
+import leagueRoutes from './routes/leagues'
 
 import { fetchLiveMatches, fetchMatchEvents, mapApiEventToScoring, updatePlayerPrices } from './services/footballApiService'
 import { calculateTeamGameweekPoints } from './services/scoringService'
 import prisma from './config/database'
+import { ensureTestAccount } from './seed-test-account'
 
 const app = express()
 const server = http.createServer(app)
@@ -87,6 +89,7 @@ app.use('/api/matches', matchRoutes)
 app.use('/api/powerups', powerupRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/duels', duelRoutes)
+app.use('/api/leagues', leagueRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
@@ -193,10 +196,11 @@ cron.schedule('0 * * * *', async () => {
 
 const PORT = parseInt(process.env.PORT ?? '4000')
 
-server.listen(PORT, () => {
+server.listen(PORT, async () => {
   logger.info(`🚀 Football Manager API running on port ${PORT}`)
   logger.info(`📡 WebSocket server ready`)
   logger.info(`🗄️  Database: ${process.env.DATABASE_URL?.split('@')[1]?.split('/')[0] ?? 'local'}`)
+  await ensureTestAccount()
 })
 
 // Graceful shutdown
