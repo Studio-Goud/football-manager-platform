@@ -1,21 +1,20 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Trophy, TrendingUp, Zap, Calendar, ArrowUp, ArrowDown, Star } from 'lucide-react'
+import { Trophy, TrendingUp, Zap, ArrowUp, ArrowDown, Star, Users } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { useLive } from '@/hooks/useLive'
+import { useTeam } from '@/hooks/useTeam'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { ProgressBar } from '@/components/ui/ProgressBar'
-import { mockCurrentUser, mockPlayers, mockMatches, mockLeaderboard } from '@/lib/mockData'
-import { formatCredits } from '@/lib/utils'
+import { mockCurrentUser, mockMatches, mockLeaderboard } from '@/lib/mockData'
 import Link from 'next/link'
 
-const statCards = (user: typeof mockCurrentUser, livePoints: number) => [
-  { label: 'Huidige Rang', value: '#23', icon: Trophy, color: '#FFD700', delta: '+5', positive: true },
-  { label: 'Totale Punten', value: '1.284', icon: Star, color: '#00FF87', delta: '+47 dit GW', positive: true },
-  { label: 'Live Punten', value: String(livePoints), icon: Zap, color: '#3B82F6', delta: 'Live', positive: true },
+const statCards = (user: typeof mockCurrentUser, livePoints: number, rank?: number, totalPoints?: number) => [
+  { label: 'Huidige Rang', value: rank ? `#${rank}` : '—', icon: Trophy, color: '#FFD700', delta: 'Ranglijst', positive: true },
+  { label: 'Totale Punten', value: totalPoints ? totalPoints.toLocaleString() : '—', icon: Star, color: '#00FF87', delta: 'Dit seizoen', positive: true },
+  { label: 'GW Punten', value: String(livePoints), icon: Zap, color: '#3B82F6', delta: 'Speelronde', positive: true },
   { label: 'Coins', value: Number(user.balance_credits).toLocaleString(), icon: TrendingUp, color: '#9B59B6', delta: 'Saldo', positive: true },
 ]
 
@@ -23,11 +22,13 @@ export default function DashboardPage() {
   const { user } = useAuthStore()
   const { livePoints, matches } = useLive()
   const { data: leaderboard } = useLeaderboard()
+  const { team, isLoading: teamLoading } = useTeam()
 
   const currentUser = user ?? mockCurrentUser
   const liveMatch = matches.find(m => m.status === 'live') ?? mockMatches.find(m => m.status === 'live')
+  const myRank = leaderboard?.entries?.find((e: { is_current_user?: boolean }) => e.is_current_user)?.rank
 
-  const stats = statCards(currentUser, livePoints || 47)
+  const stats = statCards(currentUser, livePoints || (team?.gameweek_points ?? 0), myRank, team?.total_points)
 
   return (
     <div className="space-y-6">
@@ -94,29 +95,61 @@ export default function DashboardPage() {
         {/* My team preview */}
         <Card className="lg:col-span-2 p-5">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-lg">Mijn Team</h2>
+            <h2 className="font-bold text-lg">
+              {team ? team.name : 'Mijn Team'}
+            </h2>
             <Link href="/team" className="text-[#00FF87] text-sm hover:underline">Bewerken →</Link>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            {mockPlayers.slice(0, 6).map((player) => (
-              <div key={player.id} className="bg-[#0A0E1A] rounded-xl p-3 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-[#1E2A45] flex items-center justify-center overflow-hidden flex-shrink-0">
-                  {player.photo_url
-                    ? <img src={player.photo_url} alt={player.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
-                    : <span className="text-xs font-bold text-gray-400">{player.name.charAt(0)}</span>
-                  }
+          {teamLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[...Array(6)].map((_, i) => (
+                <div key={i} className="bg-[#0A0E1A] rounded-xl p-3 flex items-center gap-3 animate-pulse">
+                  <div className="w-10 h-10 rounded-full bg-[#1E2A45] flex-shrink-0" />
+                  <div className="flex-1 space-y-1.5">
+                    <div className="h-3 bg-[#1E2A45] rounded w-3/4" />
+                    <div className="h-2.5 bg-[#1E2A45] rounded w-1/2" />
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold truncate">{player.name}</p>
-                  <p className="text-xs text-gray-500">{player.position} · {player.points_this_week}pt</p>
-                </div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-4 flex items-center justify-between bg-[#0A0E1A] rounded-xl p-3">
-            <span className="text-sm text-gray-400">Teamwaarde</span>
-            <span className="font-bold text-[#00FF87]">82.5 credits</span>
-          </div>
+              ))}
+            </div>
+          ) : team && team.players.length > 0 ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {team.players.slice(0, 6).map((tp) => {
+                const player = tp.player
+                if (!player) return null
+                return (
+                  <div key={tp.player_id} className="bg-[#0A0E1A] rounded-xl p-3 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-[#1E2A45] flex items-center justify-center overflow-hidden flex-shrink-0">
+                      {player.photo_url
+                        ? <img src={player.photo_url} alt={player.name} className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        : <span className="text-xs font-bold text-gray-400">{player.name.charAt(0)}</span>
+                      }
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold truncate">{player.name}</p>
+                      <p className="text-xs text-gray-500">{player.position} · {Number(player.total_points)}pt</p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Users className="w-10 h-10 text-gray-600 mb-3" />
+              <p className="text-gray-500 text-sm mb-3">Je hebt nog geen team</p>
+              <Link href="/team" className="bg-[#00FF87] text-[#0A0E1A] px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#00CC6A] transition-colors">
+                Team aanmaken
+              </Link>
+            </div>
+          )}
+          {team && (
+            <div className="mt-4 flex items-center justify-between bg-[#0A0E1A] rounded-xl p-3">
+              <span className="text-sm text-gray-400">Teamwaarde</span>
+              <span className="font-bold text-[#00FF87]">
+                {team.players.reduce((sum, tp) => sum + (tp.player?.price ?? 0), 0).toFixed(1)} cr
+              </span>
+            </div>
+          )}
         </Card>
 
         {/* Quick actions */}

@@ -28,6 +28,7 @@ import { fetchLiveMatches, fetchMatchEvents, mapApiEventToScoring, updatePlayerP
 import { calculateTeamGameweekPoints } from './services/scoringService'
 import prisma from './config/database'
 import { ensureTestAccount } from './seed-test-account'
+import { seedDemoData } from './seed-demo'
 
 const app = express()
 const server = http.createServer(app)
@@ -66,8 +67,23 @@ export { io }
 // ─── Middleware ──────────────────────────────���───────────────────────────��────
 
 app.use(helmet())
+
+const allowedOrigins = [
+  process.env.FRONTEND_URL ?? 'http://localhost:3000',
+  'http://localhost:3000',
+  'http://localhost:3001',
+].filter(Boolean)
+
 app.use(cors({
-  origin: process.env.FRONTEND_URL ?? 'http://localhost:3000',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, curl, etc.)
+    if (!origin) return callback(null, true)
+    // Allow any Vercel preview URL
+    if (origin.endsWith('.vercel.app') || allowedOrigins.includes(origin)) {
+      return callback(null, true)
+    }
+    callback(new Error(`CORS blocked: ${origin}`))
+  },
   credentials: true,
 }))
 app.use(morgan('combined', { stream: { write: (msg) => logger.info(msg.trim()) } }))
@@ -201,6 +217,7 @@ server.listen(PORT, async () => {
   logger.info(`📡 WebSocket server ready`)
   logger.info(`🗄️  Database: ${process.env.DATABASE_URL?.split('@')[1]?.split('/')[0] ?? 'local'}`)
   await ensureTestAccount()
+  await seedDemoData()
 })
 
 // Graceful shutdown
