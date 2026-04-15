@@ -19,6 +19,23 @@ const api = axios.create({
   timeout: 15000,
 })
 
+// Retry bij 429 — wacht 65 seconden en probeer opnieuw
+async function apiGet(url: string, params: Record<string, unknown>): Promise<unknown> {
+  try {
+    const res = await api.get(url, { params })
+    return res.data.response ?? []
+  } catch (err: unknown) {
+    const status = (err as { response?: { status?: number } })?.response?.status
+    if (status === 429) {
+      logger.warn(`Rate limit (429) op ${url} — 65 sec wachten...`)
+      await new Promise(r => setTimeout(r, 65000))
+      const res = await api.get(url, { params })
+      return res.data.response ?? []
+    }
+    throw err
+  }
+}
+
 // Eredivisie league ID bij API-Sports
 const EREDIVISIE_LEAGUE  = 88
 const EREDIVISIE_SEASON  = 2024
@@ -252,8 +269,8 @@ export async function syncEredivisiePlayers(): Promise<SyncResult> {
 
         result.teams_synced++
 
-        // Kleine pauze om rate limit te respecteren
-        await new Promise(r => setTimeout(r, 300))
+        // 6 seconden wachten — free plan limiet is 10 calls/min
+        await new Promise(r => setTimeout(r, 6000))
       } catch (teamErr) {
         logger.error(`Team sync mislukt: ${team.name}`, { teamErr })
         result.errors.push(`Team mislukt: ${team.name}`)

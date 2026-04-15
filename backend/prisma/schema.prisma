@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = env("DATABASE_PROVIDER")
   url      = env("DATABASE_URL")
 }
 
@@ -356,7 +356,7 @@ model Duel {
   opponent_team_id   String
   gameweek_id        Int
   stake              Decimal  @default(0)
-  status             String   @default("PENDING")  // PENDING | ACCEPTED | DECLINED | LIVE | COMPLETED
+  status             String   @default("PENDING")
   challenger_tactic  String   @default("BALANCED")
   opponent_tactic    String   @default("BALANCED")
   challenger_points  Decimal  @default(0)
@@ -379,7 +379,7 @@ model PrivateLeague {
   code           String   @unique
   owner_id       String
   max_members    Int      @default(20)
-  league_filter  String?  // null = alle liga's, "eredivisie" = alleen eredivisie etc.
+  league_filter  String?
   allow_mixed    Boolean  @default(true)
   season_id      Int?
   created_at     DateTime @default(now())
