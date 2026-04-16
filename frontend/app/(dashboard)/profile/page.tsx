@@ -9,7 +9,6 @@ import { Avatar } from '@/components/ui/Avatar'
 import { DepositModal } from '@/components/profile/DepositModal'
 import { TransactionTable } from '@/components/profile/TransactionTable'
 import { TierProgress } from '@/components/profile/TierProgress'
-import { mockTransactions } from '@/lib/mockData'
 import { PlusCircle, CreditCard, BarChart2, User } from 'lucide-react'
 
 type Tab = 'overview' | 'transactions' | 'tier'
@@ -26,7 +25,7 @@ export default function ProfilePage() {
     seasons_played: 4, best_finish: 12,
   }
 
-  const txData = transactions.length > 0 ? transactions : mockTransactions
+  const txData = transactions ?? []
 
   const tabs = [
     { key: 'overview' as Tab,      label: 'Overzicht',    icon: User },

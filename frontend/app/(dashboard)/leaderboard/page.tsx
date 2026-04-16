@@ -8,7 +8,7 @@ import { useAuthStore } from '@/store/authStore'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge, TierBadge } from '@/components/ui/Badge'
-import { mockLeaderboard } from '@/lib/mockData'
+import { Skeleton } from '@/components/ui/Skeleton'
 
 type ViewMode = 'season' | 'gameweek'
 
@@ -17,7 +17,7 @@ export default function LeaderboardPage() {
   const { data: leaderboard, isLoading } = useLeaderboard()
   const [viewMode, setViewMode] = useState<ViewMode>('season')
 
-  const entries = leaderboard?.entries ?? mockLeaderboard
+  const entries = leaderboard?.entries ?? []
   const top3 = entries.slice(0, 3)
   const rest = entries.slice(3)
   const myEntry = entries.find(e => e.is_current_user || e.user.id === user?.id)
@@ -128,6 +128,24 @@ export default function LeaderboardPage() {
         <div className="p-4 border-b border-[#1E2A45]">
           <h2 className="font-bold">Volledige Ranglijst</h2>
         </div>
+        {isLoading ? (
+          <div className="divide-y divide-[#1E2A45]">
+            {Array.from({ length: 8 }).map((_, i) => (
+              <div key={i} className="flex items-center gap-3 px-4 py-3">
+                <Skeleton className="w-8 h-8 rounded-lg" />
+                <Skeleton className="w-6 h-4 rounded" />
+                <Skeleton className="w-9 h-9 rounded-full" />
+                <div className="flex-1 space-y-1.5">
+                  <Skeleton className="h-3.5 w-24 rounded" />
+                  <Skeleton className="h-2.5 w-16 rounded" />
+                </div>
+                <Skeleton className="w-12 h-8 rounded" />
+              </div>
+            ))}
+          </div>
+        ) : entries.length === 0 ? (
+          <div className="p-8 text-center text-gray-500 text-sm">Nog geen deelnemers</div>
+        ) : (
         <div className="divide-y divide-[#1E2A45]">
           {entries.map((entry, i) => {
             const rankDelta = entry.previous_rank - entry.rank
@@ -185,6 +203,7 @@ export default function LeaderboardPage() {
             )
           })}
         </div>
+        )}
       </Card>
     </div>
   )
