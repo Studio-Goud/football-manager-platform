@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="96" fill="#0A0E1A"/>
+  <!-- Football pitch lines -->
+  <rect x="80" y="100" width="352" height="312" rx="8" fill="none" stroke="#1E2A45" stroke-width="6"/>
+  <line x1="256" y1="100" x2="256" y2="412" stroke="#1E2A45" stroke-width="4"/>
+  <circle cx="256" cy="256" r="48" fill="none" stroke="#1E2A45" stroke-width="4"/>
+  <!-- Ball hexagon pattern (simplified football) -->
+  <circle cx="256" cy="200" r="52" fill="#00FF87" opacity="0.9"/>
+  <circle cx="256" cy="200" r="52" fill="none" stroke="#0A0E1A" stroke-width="3"/>
+  <!-- Hex pattern on ball -->
+  <polygon points="256,162 275,173 275,195 256,206 237,195 237,173" fill="#0A0E1A" opacity="0.6"/>
+  <polygon points="256,206 275,195 288,208 281,228 231,228 224,208 237,195" fill="none" stroke="#0A0E1A" stroke-width="2" opacity="0.4"/>
+  <!-- Lightning bolt for "Pro" -->
+  <polygon points="268,280 248,320 262,320 244,360 284,308 268,308" fill="#00FF87"/>
+</svg>

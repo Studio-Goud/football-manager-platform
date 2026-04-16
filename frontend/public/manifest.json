@@ -19,6 +19,12 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    },
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
     }
   ],
   "categories": ["games", "sports"],
@@ -26,12 +32,21 @@
     {
       "name": "Mijn Team",
       "url": "/team",
-      "description": "Beheer je fantasy team"
+      "description": "Beheer je fantasy team",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Live Scores",
+      "url": "/live",
+      "description": "Live wedstrijden en scores",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Duels",
       "url": "/duels",
-      "description": "Daag vrienden uit"
+      "description": "Daag vrienden uit",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }
