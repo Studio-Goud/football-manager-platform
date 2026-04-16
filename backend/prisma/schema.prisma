@@ -381,6 +381,7 @@ model PrivateLeague {
   max_members    Int      @default(20)
   league_filter  String?
   allow_mixed    Boolean  @default(true)
+  pot_amount     Decimal?
   season_id      Int?
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt

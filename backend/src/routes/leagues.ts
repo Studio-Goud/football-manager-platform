@@ -87,6 +87,7 @@ router.post(
     body('max_members').optional().isInt({ min: 2, max: 100 }),
     body('league_filter').optional().isString(),
     body('allow_mixed').optional().isBoolean(),
+    body('pot_amount').optional().isFloat({ min: 0, max: 10000 }),
   ],
   async (req: AuthRequest, res: Response): Promise<void> => {
     const errors = validationResult(req)
@@ -95,7 +96,7 @@ router.post(
       return
     }
 
-    const { name, max_members = 20, league_filter = null, allow_mixed = true } = req.body
+    const { name, max_members = 20, league_filter = null, allow_mixed = true, pot_amount = null } = req.body
 
     try {
       const code = await uniqueCode()
@@ -108,6 +109,7 @@ router.post(
           max_members,
           league_filter: league_filter || null,
           allow_mixed,
+          pot_amount: pot_amount ? parseFloat(pot_amount) : null,
           members: {
             create: { user_id: req.user!.id },
           },
