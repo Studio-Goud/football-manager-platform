@@ -1,20 +1,70 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
-import { Bell, Check, CheckCheck, ExternalLink } from 'lucide-react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { Bell, CheckCheck, ExternalLink } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { cn, formatTimeAgo } from '@/lib/utils'
 import { Notification } from '@/types'
-import { mockNotifications } from '@/lib/mockData'
+import { getSocket } from '@/lib/socket'
+import { useAuthStore } from '@/store/authStore'
 import Link from 'next/link'
 
+let notifCounter = 0
+function makeId() { return `notif-${++notifCounter}` }
+
 export function NotificationBell() {
+  const { user } = useAuthStore()
   const [isOpen, setIsOpen] = useState(false)
-  const [notifications, setNotifications] = useState<Notification[]>(mockNotifications)
+  const [notifications, setNotifications] = useState<Notification[]>([])
   const containerRef = useRef<HTMLDivElement>(null)
 
-  const unreadCount = notifications.filter((n) => !n.read).length
+  const addNotif = useCallback((n: Omit<Notification, 'id' | 'read' | 'created_at'>) => {
+    setNotifications(prev => [
+      { ...n, id: makeId(), read: false, created_at: new Date().toISOString() },
+      ...prev.slice(0, 29), // keep max 30
+    ])
+  }, [])
 
+  // Subscribe to socket events for real-time notifications
+  useEffect(() => {
+    if (!user) return
+    const socket = getSocket()
+
+    // Join user-specific room for personal notifications
+    socket.emit('join:user', user.id)
+
+    socket.on('user:points', (...args: unknown[]) => {
+      const data = args[0] as { total_points: number; delta: number; event?: { player_name?: string; event_type?: string } }
+      if (data.delta > 0) {
+        const player = data.event?.player_name ?? 'Speler'
+        const type = data.event?.event_type ?? 'goal'
+        const typeLabel = type === 'goal' ? 'scoort' : type === 'assist' ? 'geeft assist' : 'presteert'
+        addNotif({
+          type: 'match_event',
+          title: `+${data.delta} punten`,
+          message: `${player} ${typeLabel}! Totaal: ${data.total_points} punten`,
+        })
+      }
+    })
+
+    socket.on('match:event', (...args: unknown[]) => {
+      const ev = args[0] as { event_type?: string; player_name?: string; minute?: number; match_id?: string }
+      if (ev.event_type === 'goal') {
+        addNotif({
+          type: 'match_event',
+          title: `Goal — ${ev.player_name ?? 'Onbekend'}`,
+          message: `Min ${ev.minute ?? '?'}' · Doelpunt in jouw wedstrijd`,
+        })
+      }
+    })
+
+    return () => {
+      socket.off('user:points')
+      socket.off('match:event')
+    }
+  }, [user, addNotif])
+
+  // Close on outside click
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
@@ -24,6 +74,8 @@ export function NotificationBell() {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
+
+  const unreadCount = notifications.filter((n) => !n.read).length
 
   const markRead = (id: string) => {
     setNotifications((prev) =>
@@ -36,14 +88,14 @@ export function NotificationBell() {
   }
 
   const getNotificationIcon = (type: Notification['type']) => {
-    const icons = {
+    const icons: Record<string, string> = {
       match_event: '⚽',
       trade: '💱',
       prize: '🏆',
       system: 'ℹ️',
       transfer_window: '🔄',
     }
-    return icons[type] || '📢'
+    return icons[type] ?? '📢'
   }
 
   return (
@@ -87,7 +139,9 @@ export function NotificationBell() {
             <div className="max-h-80 overflow-y-auto">
               {notifications.length === 0 ? (
                 <div className="px-4 py-8 text-center text-gray-500 text-sm">
+                  <Bell className="w-8 h-8 mx-auto mb-2 opacity-20" />
                   Geen meldingen
+                  <p className="text-xs mt-1 opacity-60">Live score alerts verschijnen hier</p>
                 </div>
               ) : (
                 notifications.map((notification) => (
