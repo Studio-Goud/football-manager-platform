@@ -84,6 +84,14 @@ export default function AdminPage() {
     }
   })
 
+  const seedDemo = () => doAction('Demo seed', async () => {
+    const res = await api.post('/admin/seed-demo')
+    const r = res.data?.data
+    if (r?.players != null) {
+      toast.success(`✅ ${r.players} spelers gezaaid`, { duration: 4000 })
+    }
+  })
+
   const createSeason = () => doAction('Seizoen aanmaken', () =>
     api.post('/admin/seasons', { name: `Seizoen ${new Date().getFullYear()}` })
   )
@@ -171,6 +179,10 @@ export default function AdminPage() {
           <Card className="p-5">
             <h2 className="font-bold mb-4">Snelle acties</h2>
             <div className="space-y-3">
+              <Button onClick={seedDemo} loading={actionLoading === 'Demo seed'} className="w-full" variant="secondary">
+                <Database className="w-4 h-4 mr-2" />
+                Demo spelers zaai (snelle fix)
+              </Button>
               <Button onClick={syncPlayers} loading={actionLoading === 'Spelers synchroniseren'} className="w-full" variant="secondary">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Spelers synchroniseren (API)

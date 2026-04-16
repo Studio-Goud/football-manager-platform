@@ -4,6 +4,7 @@ import { sendSuccess, sendError } from '../utils/apiResponse'
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth'
 import { syncEredivisiePlayers } from '../services/syncPlayersService'
 import { processSeasonEndRewards, giveNewSeasonBonus } from '../services/seasonRewardService'
+import { seedDemoDataForce } from '../seed-demo'
 import logger from '../config/logger'
 
 const router = Router()
@@ -129,6 +130,16 @@ router.post('/seasons', async (req: AuthRequest, res: Response): Promise<void> =
     sendSuccess(res, season, 'Seizoen aangemaakt', 201)
   } catch {
     sendError(res, 'Aanmaken mislukt', 500)
+  }
+})
+
+// POST /admin/seed-demo — force-seed demo spelers (herstel lege database)
+router.post('/seed-demo', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const result = await seedDemoDataForce()
+    sendSuccess(res, result, `Demo seed klaar: ${result.players} spelers, seizoen ${result.season ? 'aangemaakt' : 'al aanwezig'}`)
+  } catch {
+    sendError(res, 'Seed mislukt', 500)
   }
 })
 

@@ -64,12 +64,52 @@ const EREDIVISIE_PLAYERS = [
   { name: 'Calvin Stengs',      display_name: 'Stengs',    club: 'NEC', club_id: 617, position: 'MID', nationality: 'NL', price: 6.5, form: 7.0, total_points: 118 },
 ]
 
+/**
+ * Force-seed: always ensures players + season exist, skips duplicate creates safely.
+ * Used from admin endpoint when production database is empty.
+ */
+export async function seedDemoDataForce(): Promise<{ players: number; season: boolean }> {
+  const league = await prisma.league.upsert({
+    where: { external_id: 'eredivisie-2025' },
+    create: { name: 'Eredivisie', country: 'Netherlands', external_id: 'eredivisie-2025', is_active: true },
+    update: {},
+  })
+
+  let playersCreated = 0
+  for (let i = 0; i < EREDIVISIE_PLAYERS.length; i++) {
+    const p = EREDIVISIE_PLAYERS[i]
+    await prisma.player.upsert({
+      where: { external_id: `eredivisie-${p.club_id}-${i}` },
+      create: {
+        external_id: `eredivisie-${p.club_id}-${i}`,
+        name: p.name, display_name: p.display_name, club: p.club, club_id: p.club_id,
+        position: p.position, nationality: p.nationality, league_id: league.id,
+        league_external_id: 'eredivisie-2025', price: p.price, form: p.form,
+        total_points: p.total_points, availability: 'AVAILABLE',
+      },
+      update: { form: p.form, total_points: p.total_points, price: p.price },
+    })
+    playersCreated++
+  }
+
+  const existingSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+  const seasonCreated = !existingSeason
+
+  return { players: playersCreated, season: seasonCreated }
+}
+
 export async function seedDemoData(): Promise<void> {
   try {
     // Skip if active season exists
     const existingSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
     if (existingSeason) {
       logger.info('Demo seed overgeslagen: actief seizoen bestaat al', { id: existingSeason.id })
+      // Still ensure players exist (idempotent)
+      const playerCount = await prisma.player.count()
+      if (playerCount === 0) {
+        logger.info('Geen spelers in DB, force-seeding spelers...')
+        await seedDemoDataForce()
+      }
       return
     }
 
