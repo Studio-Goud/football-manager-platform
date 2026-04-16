@@ -36,12 +36,12 @@ interface LiveState {
 
 export const useLiveStore = create<LiveState>((set, get) => ({
   matches: [],
-  livePoints: 142,
+  livePoints: 0,
   pointsDelta: 0,
   events: [],
   recentNotifications: [],
-  myLiveRank: 12,
-  myPreviousRank: 14,
+  myLiveRank: 0,
+  myPreviousRank: 0,
   isConnected: false,
   lastUpdated: null,
 

@@ -215,7 +215,7 @@ export default function MarketplacePage() {
         onClose={() => setBidModal(null)}
         onBid={(id, amount) => bid({ listingId: id, amount })}
         isBidding={isBidding}
-        userBalance={user?.balance_credits ?? 47.5}
+        userBalance={user?.balance_credits ?? 0}
       />
 
       <CreateListingModal

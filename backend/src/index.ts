@@ -25,7 +25,7 @@ import duelRoutes from './routes/duels'
 import leagueRoutes from './routes/leagues'
 
 import { fetchLiveMatches, fetchMatchEvents, mapApiEventToScoring, updatePlayerPrices } from './services/footballApiService'
-import { calculateTeamGameweekPoints } from './services/scoringService'
+import { calculateTeamGameweekPoints, SCORING } from './services/scoringService'
 import prisma from './config/database'
 import { ensureTestAccount } from './seed-test-account'
 import { seedDemoData } from './seed-demo'
@@ -153,11 +153,62 @@ cron.schedule('* * * * *', async () => {
         const mappedEvent = mapApiEventToScoring(apiEvent)
         if (!mappedEvent) continue
 
-        // Emit event
+        // Emit event to match room
         io.to(`match:${dbMatch.id}`).emit('match:event', {
           match_id: dbMatch.id,
           ...mappedEvent,
         })
+
+        // Notify users whose team has this player → live points delta
+        if (mappedEvent.player_id && ['goal', 'assist', 'yellow_card', 'red_card', 'own_goal'].includes(mappedEvent.event_type)) {
+          try {
+            const affectedTeamPlayers = await prisma.teamPlayer.findMany({
+              where: {
+                player: { external_id: { contains: mappedEvent.player_id.toString() } },
+                slot_position: { not: { startsWith: 'BENCH' } },
+              },
+              include: {
+                team: { select: { id: true, user_id: true, tactic_style: true, captain_player_id: true } },
+                player: { select: { position: true } },
+              },
+            })
+
+            for (const tp of affectedTeamPlayers) {
+              const userId = tp.team.user_id
+              if (!userId) continue
+
+              // Simple delta: look up scoring for this event type
+              const pos = tp.player.position as 'GK' | 'DEF' | 'MID' | 'FWD'
+              let delta = 0
+              if (mappedEvent.event_type === 'goal') delta = SCORING.goal[pos] ?? SCORING.goal.MID
+              else if (mappedEvent.event_type === 'assist') delta = SCORING.assist
+              else if (mappedEvent.event_type === 'yellow_card') delta = SCORING.yellow_card
+              else if (mappedEvent.event_type === 'red_card') delta = SCORING.red_card
+              else if (mappedEvent.event_type === 'own_goal') delta = SCORING.own_goal
+
+              if (tp.is_captain) delta *= SCORING.captain_multiplier
+
+              // Fetch current total points for the user from their active team
+              const teamGameweek = await prisma.teamGameweek.findFirst({
+                where: { team_id: tp.team.id },
+                orderBy: { gameweek_id: 'desc' },
+              })
+              const currentPoints = teamGameweek ? Number(teamGameweek.points) : 0
+
+              io.to(`user:${userId}`).emit('user:points', {
+                total_points: currentPoints + delta,
+                delta,
+                event: {
+                  event_type: mappedEvent.event_type,
+                  player_name: mappedEvent.player_name,
+                  minute: mappedEvent.minute,
+                },
+              })
+            }
+          } catch (err) {
+            logger.warn('user:points emit failed', { err })
+          }
+        }
       }
     }
   } catch (err) {
