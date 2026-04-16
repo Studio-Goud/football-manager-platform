@@ -2,47 +2,46 @@ import { Router, Response } from 'express'
 import prisma from '../config/database'
 import { sendSuccess, sendError } from '../utils/apiResponse'
 import { authenticate, AuthRequest } from '../middleware/auth'
+import { fetchLiveMatches, fetchTodayFixtures } from '../services/footballApiService'
 
 const router = Router()
 
-// GET /matches/live
+// GET /matches/live — live wedstrijden direct van API-Sports (gecached 60s)
 router.get('/live', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
+    const apiMatches = await fetchLiveMatches()
+
+    if (apiMatches.length > 0) {
+      sendSuccess(res, apiMatches)
+      return
+    }
+
+    // Fallback: database
     const matches = await prisma.match.findMany({
       where: { status: { in: ['LIVE', 'HALFTIME'] } },
-      include: { events: { orderBy: { minute: 'desc' } } },
       orderBy: { kickoff: 'asc' },
     })
-
-    // Get user's team to mark their players
-    const team = await prisma.team.findFirst({
-      where: { user: { id: req.user!.id } },
-      include: { players: true },
-      orderBy: { created_at: 'desc' },
-    })
-
-    const myPlayerIds = team?.players.map(p => p.player_id) ?? []
-
     sendSuccess(res, matches.map(m => ({
-      id: m.id,
-      home_team: m.home_team,
-      away_team: m.away_team,
-      home_score: m.home_score ?? 0,
-      away_score: m.away_score ?? 0,
-      status: m.status.toLowerCase(),
-      minute: m.minute ?? 0,
-      kickoff_time: m.kickoff.toISOString(),
-      events: m.events.map(e => ({
-        id: e.id,
-        type: e.event_type.toLowerCase(),
-        player_id: e.player_id?.toString(),
-        minute: e.minute,
-        points_awarded: Number(e.points_awarded),
-        is_my_player: e.player_id ? myPlayerIds.includes(e.player_id) : false,
-      })),
-      my_players_in_match: [],
-      my_points_from_match: 0,
+      fixture_id:  m.external_id,
+      home_team:   m.home_team,
+      away_team:   m.away_team,
+      home_score:  m.home_score ?? 0,
+      away_score:  m.away_score ?? 0,
+      status:      m.status,
+      minute:      m.minute ?? 0,
+      league_name: 'Eredivisie',
+      league_flag: '🇳🇱',
     })))
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// GET /matches/today — wedstrijden van vandaag (gecached 5 min)
+router.get('/today', authenticate, async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const fixtures = await fetchTodayFixtures()
+    sendSuccess(res, fixtures)
   } catch {
     sendError(res, 'Ophalen mislukt', 500)
   }

@@ -14,25 +14,133 @@ const apiClient = axios.create({
   },
 })
 
-// Competition IDs for API-Football
-const COMPETITIONS = {
-  eredivisie: 88,
-  premier_league: 39,
+// Alle grote Europese competities + internationale toernooien
+export const COMPETITIONS: Record<string, { id: number; name: string; country: string; flag: string }> = {
+  // Top 5 Europa
+  premier_league:    { id: 39,  name: 'Premier League',    country: 'England',     flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  la_liga:           { id: 140, name: 'La Liga',            country: 'Spain',       flag: '🇪🇸' },
+  bundesliga:        { id: 78,  name: 'Bundesliga',         country: 'Germany',     flag: '🇩🇪' },
+  serie_a:           { id: 135, name: 'Serie A',            country: 'Italy',       flag: '🇮🇹' },
+  ligue_1:           { id: 61,  name: 'Ligue 1',            country: 'France',      flag: '🇫🇷' },
+  // Andere top liga's
+  eredivisie:        { id: 88,  name: 'Eredivisie',         country: 'Netherlands', flag: '🇳🇱' },
+  primeira_liga:     { id: 94,  name: 'Primeira Liga',      country: 'Portugal',    flag: '🇵🇹' },
+  pro_league:        { id: 144, name: 'Pro League',         country: 'Belgium',     flag: '🇧🇪' },
+  super_lig:         { id: 203, name: 'Süper Lig',          country: 'Turkey',      flag: '🇹🇷' },
+  // Europese cups
+  champions_league:  { id: 2,   name: 'Champions League',  country: 'Europe',      flag: '⭐' },
+  europa_league:     { id: 3,   name: 'Europa League',      country: 'Europe',      flag: '🟠' },
+  conference_league: { id: 848, name: 'Conference League',  country: 'Europe',      flag: '🔵' },
+  // Internationaal
+  world_cup:         { id: 1,   name: 'World Cup',          country: 'World',       flag: '🌍' },
+  euros:             { id: 4,   name: 'Euro Championship',  country: 'Europe',      flag: '🇪🇺' },
+  nations_league:    { id: 5,   name: 'Nations League',     country: 'Europe',      flag: '🏆' },
 }
 
-// ─── Fetch live matches ────────────────────────────────────────────────────────
+const COMPETITION_BY_ID: Record<number, { name: string; flag: string }> =
+  Object.fromEntries(Object.values(COMPETITIONS).map(c => [c.id, { name: c.name, flag: c.flag }]))
 
-export async function fetchLiveMatches(competition?: keyof typeof COMPETITIONS) {
+// ─── In-memory cache (60 seconden) zodat we niet 1440 calls/dag verbruiken ────
+
+let liveCache: { data: unknown[]; ts: number } | null = null
+const CACHE_TTL = 60_000
+
+// ─── Fetch live matches (alle grote competities, gecached) ────────────────────
+
+export async function fetchLiveMatches() {
+  // Geef cache terug als die nog vers is
+  if (liveCache && Date.now() - liveCache.ts < CACHE_TTL) {
+    return liveCache.data
+  }
+
   try {
-    const leagueId = competition ? COMPETITIONS[competition] : undefined
-    const params: Record<string, string | number> = { live: 'all' }
-    if (leagueId) params.league = leagueId
+    const response = await apiClient.get('/fixtures', { params: { live: 'all' } })
+    const raw: unknown[] = response.data.response ?? []
 
-    const response = await apiClient.get('/fixtures', { params })
-    return response.data.response ?? []
+    // Verrijk met league naam + vlag
+    const enriched = raw.map((f: any) => {
+      const leagueId: number = f.league?.id
+      const meta = COMPETITION_BY_ID[leagueId] ?? { name: f.league?.name ?? 'Unknown', flag: '⚽' }
+      return {
+        fixture_id:    f.fixture?.id,
+        home_team:     f.teams?.home?.name ?? '',
+        home_logo:     f.teams?.home?.logo ?? '',
+        away_team:     f.teams?.away?.name ?? '',
+        away_logo:     f.teams?.away?.logo ?? '',
+        home_score:    f.goals?.home ?? 0,
+        away_score:    f.goals?.away ?? 0,
+        minute:        f.fixture?.status?.elapsed ?? 0,
+        status:        f.fixture?.status?.short ?? 'LIVE',
+        league_id:     leagueId,
+        league_name:   meta.name,
+        league_flag:   meta.flag,
+      }
+    })
+
+    // Alleen grote competities tonen (filter onbekende)
+    const knownIds = new Set(Object.values(COMPETITIONS).map(c => c.id))
+    const filtered = enriched.filter(f => knownIds.has(f.league_id))
+
+    liveCache = { data: filtered, ts: Date.now() }
+    return filtered
   } catch (err) {
     logger.error('Failed to fetch live matches', { err })
-    return []
+    return liveCache?.data ?? []
+  }
+}
+
+// ─── Fetch today + tomorrow fixtures voor dashboard ────────────────────────────
+
+let todayCache: { data: unknown[]; ts: number } | null = null
+
+export async function fetchTodayFixtures() {
+  if (todayCache && Date.now() - todayCache.ts < 300_000) return todayCache.data // 5 min cache
+
+  try {
+    const today = new Date().toISOString().split('T')[0]
+    const knownIds = Object.values(COMPETITIONS).map(c => c.id)
+
+    // Haal per competitie de fixtures van vandaag op (parallel, max 5 tegelijk)
+    const chunks = knownIds.reduce<number[][]>((acc, id, i) => {
+      if (i % 5 === 0) acc.push([])
+      acc[acc.length - 1].push(id)
+      return acc
+    }, [])
+
+    const allFixtures: unknown[] = []
+
+    for (const chunk of chunks) {
+      const results = await Promise.allSettled(
+        chunk.map(leagueId =>
+          apiClient.get('/fixtures', { params: { league: leagueId, date: today, season: 2024 } })
+            .then(r => (r.data.response ?? []).map((f: any) => {
+              const meta = COMPETITION_BY_ID[leagueId] ?? { name: 'Unknown', flag: '⚽' }
+              return {
+                fixture_id:  f.fixture?.id,
+                home_team:   f.teams?.home?.name ?? '',
+                home_logo:   f.teams?.home?.logo ?? '',
+                away_team:   f.teams?.away?.name ?? '',
+                away_logo:   f.teams?.away?.logo ?? '',
+                home_score:  f.goals?.home,
+                away_score:  f.goals?.away,
+                kickoff:     f.fixture?.date,
+                status:      f.fixture?.status?.short ?? 'NS',
+                minute:      f.fixture?.status?.elapsed,
+                league_id:   leagueId,
+                league_name: meta.name,
+                league_flag: meta.flag,
+              }
+            }))
+        )
+      )
+      results.forEach(r => { if (r.status === 'fulfilled') allFixtures.push(...r.value as unknown[]) })
+    }
+
+    todayCache = { data: allFixtures, ts: Date.now() }
+    return allFixtures
+  } catch (err) {
+    logger.error('Failed to fetch today fixtures', { err })
+    return todayCache?.data ?? []
   }
 }
 

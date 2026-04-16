@@ -123,30 +123,28 @@ cron.schedule('* * * * *', async () => {
   try {
     const liveMatches = await fetchLiveMatches()
 
-    for (const match of liveMatches) {
-      const fixtureId = match.fixture?.id
+    for (const match of liveMatches as any[]) {
+      const fixtureId = match.fixture_id
       if (!fixtureId) continue
 
       const dbMatch = await prisma.match.findFirst({ where: { external_id: fixtureId.toString() } })
       if (!dbMatch) continue
 
-      // Update match status
       await prisma.match.update({
         where: { id: dbMatch.id },
         data: {
           status: 'LIVE',
-          minute: match.fixture?.status?.elapsed ?? 0,
-          home_score: match.goals?.home ?? 0,
-          away_score: match.goals?.away ?? 0,
+          minute: match.minute ?? 0,
+          home_score: match.home_score ?? 0,
+          away_score: match.away_score ?? 0,
         },
       })
 
-      // Emit score update via socket
       io.to(`match:${dbMatch.id}`).emit('match:score', {
         match_id: dbMatch.id,
-        home_score: match.goals?.home ?? 0,
-        away_score: match.goals?.away ?? 0,
-        minute: match.fixture?.status?.elapsed ?? 0,
+        home_score: match.home_score ?? 0,
+        away_score: match.away_score ?? 0,
+        minute: match.minute ?? 0,
       })
 
       // Fetch and process events

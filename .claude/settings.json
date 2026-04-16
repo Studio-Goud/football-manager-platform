@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//tmp/**)",
+      "Bash(powershell -Command \"\\(Get-PSDrive C\\).Free / 1GB\")",
+      "Bash(powershell -Command ' *)",
+      "Bash(vercel --version)",
+      "Bash(npx vercel *)",
+      "Bash(rm c:/Users/ricar/Downloads/football-manager-platform/frontend/app/admin/page.tsx)",
+      "Bash(rmdir c:/Users/ricar/Downloads/football-manager-platform/frontend/app/admin/)",
+      "Bash(DATABASE_PROVIDER=sqlite DATABASE_URL=\"file:./prisma/dev.db\" npx prisma generate --schema=./prisma/schema.prisma)",
+      "Bash(sed 's/provider = env\\(\"DATABASE_PROVIDER\"\\)/provider = \"sqlite\"/' prisma/schema.prisma)",
+      "Bash(DATABASE_URL=\"file:./prisma/dev.db\" npx prisma generate --schema=/tmp/schema_local.prisma)",
+      "Bash(grep -v \"^$\")"
+    ]
+  }
+}

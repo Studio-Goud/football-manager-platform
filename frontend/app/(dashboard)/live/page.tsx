@@ -1,142 +1,210 @@
 'use client'
 
-import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { useLive } from '@/hooks/useLive'
-import { useLeaderboard } from '@/hooks/useLeaderboard'
-import { MatchCard } from '@/components/live/MatchCard'
-import { EventFeed } from '@/components/live/EventFeed'
-import { LivePoints } from '@/components/live/LivePoints'
-import { LiveLeaderboard } from '@/components/live/LiveLeaderboard'
+import { Radio, Clock } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
-import { mockMatches, mockMatchEvents, mockLeaderboard } from '@/lib/mockData'
-import { Match } from '@/types'
-import { Zap, Radio, Trophy } from 'lucide-react'
+import { Skeleton } from '@/components/ui/Skeleton'
+import api from '@/lib/api'
 
-export default function LivePage() {
-  const { matches: liveMatches, livePoints } = useLive()
-  const { data: leaderboard } = useLeaderboard()
-  const [selectedMatch, setSelectedMatch] = useState<Match | null>(null)
+interface Fixture {
+  fixture_id: number
+  home_team: string
+  home_logo?: string
+  away_team: string
+  away_logo?: string
+  home_score?: number
+  away_score?: number
+  minute?: number
+  status: string
+  kickoff?: string
+  league_id: number
+  league_name: string
+  league_flag: string
+}
 
-  const allMatches = liveMatches.length > 0 ? liveMatches : mockMatches
-  const liveMatchesList = allMatches.filter(m => m.status === 'live' || m.status === 'half_time')
-  const upcomingMatches = allMatches.filter(m => m.status === 'scheduled')
-  const finishedMatches = allMatches.filter(m => m.status === 'finished')
+const STATUS_LIVE = new Set(['1H', '2H', 'ET', 'BT', 'P', 'LIVE'])
+const STATUS_HT   = new Set(['HT'])
+const STATUS_FT   = new Set(['FT', 'AET', 'PEN'])
 
-  const displayedMatch = selectedMatch ?? liveMatchesList[0]
-  const matchEvents = displayedMatch ? (mockMatchEvents[displayedMatch.id] ?? []) : []
+function statusLabel(s: string, minute?: number) {
+  if (STATUS_HT.has(s)) return 'HT'
+  if (STATUS_FT.has(s)) return 'FT'
+  if (STATUS_LIVE.has(s) && minute) return `${minute}'`
+  return s
+}
+
+function MatchRow({ f }: { f: Fixture }) {
+  const isLive = STATUS_LIVE.has(f.status) || STATUS_HT.has(f.status)
+  const isFt   = STATUS_FT.has(f.status)
+  const hasScore = f.home_score != null
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-black">Live Wedstrijden</h1>
-          <p className="text-gray-400 text-sm mt-1">Speelronde 28 · {liveMatchesList.length} wedstrijden live</p>
-        </div>
-        {liveMatchesList.length > 0 && (
-          <div className="flex items-center gap-2 bg-[#00FF87]/10 border border-[#00FF87]/20 rounded-full px-3 py-1">
-            <span className="w-2 h-2 bg-[#00FF87] rounded-full animate-pulse" />
-            <span className="text-[#00FF87] text-sm font-semibold">{liveMatchesList.length} LIVE</span>
-          </div>
+    <div className="flex items-center gap-3 py-3 px-4 hover:bg-[#1E2A45]/30 transition-colors">
+      {/* Status */}
+      <div className="w-14 text-center flex-shrink-0">
+        {isLive ? (
+          <span className="text-xs font-black text-[#00FF87] flex items-center gap-1 justify-center">
+            <span className="w-1.5 h-1.5 bg-[#00FF87] rounded-full animate-pulse" />
+            {statusLabel(f.status, f.minute)}
+          </span>
+        ) : isFt ? (
+          <span className="text-xs text-gray-500 font-medium">FT</span>
+        ) : (
+          <span className="text-xs text-gray-400">
+            {f.kickoff ? new Date(f.kickoff).toLocaleTimeString('nl', { hour: '2-digit', minute: '2-digit' }) : '—'}
+          </span>
         )}
       </div>
 
-      <div className="grid lg:grid-cols-3 gap-6">
-        {/* Left: Matches list */}
-        <div className="lg:col-span-1 space-y-4">
-          {/* Live now */}
-          {liveMatchesList.length > 0 && (
-            <div>
-              <div className="flex items-center gap-2 mb-2">
-                <Radio className="w-4 h-4 text-[#00FF87]" />
-                <span className="text-sm font-semibold text-[#00FF87]">Live nu</span>
-              </div>
-              <div className="space-y-2">
-                {liveMatchesList.map(match => (
-                  <MatchCard
-                    key={match.id}
-                    match={match}
-                    isExpanded={displayedMatch?.id === match.id}
-                    onClick={() => setSelectedMatch(match)}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+      {/* Home */}
+      <div className="flex items-center gap-2 flex-1 justify-end">
+        {f.home_logo && <img src={f.home_logo} alt="" className="w-5 h-5 object-contain" />}
+        <span className="text-sm font-semibold text-right truncate max-w-[120px]">{f.home_team}</span>
+      </div>
 
-          {/* Upcoming */}
-          {upcomingMatches.length > 0 && (
-            <div>
-              <p className="text-sm font-semibold text-gray-400 mb-2">Aankomend</p>
-              <div className="space-y-2">
-                {upcomingMatches.map(match => (
-                  <MatchCard key={match.id} match={match} onClick={() => setSelectedMatch(match)} />
-                ))}
-              </div>
-            </div>
-          )}
+      {/* Score */}
+      <div className="w-16 text-center flex-shrink-0">
+        {hasScore ? (
+          <span className={`text-lg font-black ${isLive ? 'text-[#00FF87]' : 'text-white'}`}>
+            {f.home_score} – {f.away_score}
+          </span>
+        ) : (
+          <span className="text-gray-500 text-sm">vs</span>
+        )}
+      </div>
 
-          {/* Finished */}
-          {finishedMatches.length > 0 && (
-            <div>
-              <p className="text-sm font-semibold text-gray-400 mb-2">Afgelopen</p>
-              <div className="space-y-2">
-                {finishedMatches.map(match => (
-                  <MatchCard key={match.id} match={match} onClick={() => setSelectedMatch(match)} />
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
+      {/* Away */}
+      <div className="flex items-center gap-2 flex-1">
+        <span className="text-sm font-semibold truncate max-w-[120px]">{f.away_team}</span>
+        {f.away_logo && <img src={f.away_logo} alt="" className="w-5 h-5 object-contain" />}
+      </div>
+    </div>
+  )
+}
 
-        {/* Center: Events */}
-        <div className="lg:col-span-1 space-y-4">
-          {/* Live points */}
-          <LivePoints
-            points={livePoints || 47}
-            rank={23}
-            prizeEstimate={169}
-          />
+function LeagueGroup({ group, isLive }: { group: { name: string; flag: string; matches: Fixture[] }; isLive?: boolean }) {
+  const liveCount = group.matches.filter(m => STATUS_LIVE.has(m.status) || STATUS_HT.has(m.status)).length
+  return (
+    <Card className="overflow-hidden">
+      <div className="px-4 py-2.5 border-b border-[#1E2A45] flex items-center gap-2">
+        <span className="text-base">{group.flag}</span>
+        <span className="text-sm font-bold">{group.name}</span>
+        {liveCount > 0 && (
+          <span className="ml-auto text-xs text-[#00FF87] font-medium flex items-center gap-1">
+            <span className="w-1.5 h-1.5 bg-[#00FF87] rounded-full animate-pulse" />
+            {liveCount} live
+          </span>
+        )}
+      </div>
+      <div className="divide-y divide-[#1E2A45]/50">
+        {group.matches.map(f => (
+          <motion.div key={f.fixture_id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
+            <MatchRow f={f} />
+          </motion.div>
+        ))}
+      </div>
+    </Card>
+  )
+}
 
-          {/* Events */}
-          <Card className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Zap className="w-4 h-4 text-[#FFD700]" />
-              <h2 className="font-bold">Match Events</h2>
-              {displayedMatch && <span className="text-xs text-gray-500">({displayedMatch.home_team} vs {displayedMatch.away_team})</span>}
-            </div>
-            <EventFeed events={matchEvents} />
-          </Card>
-        </div>
+function groupByLeague(matches: Fixture[]) {
+  const map = new Map<string, { name: string; flag: string; matches: Fixture[] }>()
+  for (const m of matches) {
+    if (!map.has(m.league_name)) map.set(m.league_name, { name: m.league_name, flag: m.league_flag, matches: [] })
+    map.get(m.league_name)!.matches.push(m)
+  }
+  return Array.from(map.values()).sort((a, b) => {
+    if (a.name.includes('Champions')) return -1
+    if (b.name.includes('Champions')) return 1
+    if (a.name.includes('Europa')) return -1
+    if (b.name.includes('Europa')) return 1
+    return a.name.localeCompare(b.name)
+  })
+}
 
-        {/* Right: Leaderboard */}
-        <div className="lg:col-span-1 space-y-4">
-          <Card className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Trophy className="w-4 h-4 text-[#FFD700]" />
-              <h2 className="font-bold">Live Ranglijst</h2>
-            </div>
-            <LiveLeaderboard
-              entries={leaderboard?.entries ?? mockLeaderboard}
-            />
-          </Card>
+export default function LivePage() {
+  const { data: liveMatches = [], isLoading: loadingLive } = useQuery({
+    queryKey: ['live-matches'],
+    queryFn: async () => {
+      const res = await api.get('/matches/live')
+      return res.data.data as Fixture[]
+    },
+    refetchInterval: 60000,
+  })
 
-          {/* My players in this match */}
-          {displayedMatch && displayedMatch.my_players_in_match.length > 0 && (
-            <Card className="p-4">
-              <h2 className="font-bold mb-3 text-sm">Mijn Spelers ({displayedMatch.my_players_in_match.length})</h2>
-              <div className="space-y-2">
-                {displayedMatch.my_players_in_match.slice(0, 5).map(playerId => (
-                  <div key={playerId} className="flex items-center justify-between bg-[#0A0E1A] rounded-lg px-3 py-2">
-                    <span className="text-sm">Speler {playerId}</span>
-                    <span className="text-xs text-[#00FF87]">+6 pt</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
+  const { data: todayMatches = [], isLoading: loadingToday } = useQuery({
+    queryKey: ['today-matches'],
+    queryFn: async () => {
+      const res = await api.get('/matches/today')
+      return res.data.data as Fixture[]
+    },
+    refetchInterval: 300000,
+  })
+
+  const liveGroups     = groupByLeague(liveMatches)
+  const scheduledToday = todayMatches.filter(m => !STATUS_FT.has(m.status) && !STATUS_LIVE.has(m.status) && !STATUS_HT.has(m.status))
+  const finishedToday  = todayMatches.filter(m => STATUS_FT.has(m.status))
+  const scheduledGroups = groupByLeague(scheduledToday)
+  const finishedGroups  = groupByLeague(finishedToday)
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-3">
+        <Radio className="w-5 h-5 text-red-400" />
+        <div>
+          <h1 className="text-2xl font-black">Live Scores</h1>
+          <p className="text-gray-400 text-sm">
+            Premier League · La Liga · Bundesliga · Serie A · Ligue 1 · Eredivisie · Champions League + meer
+          </p>
         </div>
       </div>
+
+      {/* Live nu */}
+      <section>
+        <div className="flex items-center gap-2 mb-3">
+          <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
+          <h2 className="font-bold text-red-400 uppercase text-sm tracking-wider">Nu Live</h2>
+        </div>
+
+        {loadingLive ? (
+          <div className="space-y-3">
+            {[1,2,3].map(i => <Skeleton key={i} className="h-20 rounded-xl" />)}
+          </div>
+        ) : liveGroups.length === 0 ? (
+          <Card className="p-8 text-center">
+            <p className="text-gray-500 text-sm">Geen live wedstrijden op dit moment.</p>
+            <p className="text-gray-600 text-xs mt-1">Bekijk hieronder de wedstrijden van vandaag.</p>
+          </Card>
+        ) : (
+          <div className="space-y-3">
+            {liveGroups.map(g => <LeagueGroup key={g.name} group={g} isLive />)}
+          </div>
+        )}
+      </section>
+
+      {/* Vandaag gepland */}
+      {!loadingToday && scheduledGroups.length > 0 && (
+        <section>
+          <div className="flex items-center gap-2 mb-3">
+            <Clock className="w-4 h-4 text-gray-400" />
+            <h2 className="font-bold text-gray-300 text-sm uppercase tracking-wider">Vandaag gepland</h2>
+          </div>
+          <div className="space-y-3">
+            {scheduledGroups.map(g => <LeagueGroup key={g.name} group={g} />)}
+          </div>
+        </section>
+      )}
+
+      {/* Afgelopen vandaag */}
+      {finishedGroups.length > 0 && (
+        <section>
+          <h2 className="font-bold text-gray-500 text-sm uppercase tracking-wider mb-3">Afgelopen</h2>
+          <div className="space-y-3 opacity-70">
+            {finishedGroups.map(g => <LeagueGroup key={g.name} group={g} />)}
+          </div>
+        </section>
+      )}
     </div>
   )
 }
