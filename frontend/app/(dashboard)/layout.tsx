@@ -8,6 +8,7 @@ import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { LiveScoreBar } from '@/components/layout/LiveScoreBar'
 import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
+import { PullToRefresh } from '@/components/ui/PullToRefresh'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore()
@@ -47,7 +48,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <Topbar onMenuToggle={() => setSidebarOpen(true)} />
         <LiveScoreBar />
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto pb-24 lg:pb-8">
-          {children}
+          <PullToRefresh>
+            {children}
+          </PullToRefresh>
         </main>
       </div>
 

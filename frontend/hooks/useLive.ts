@@ -5,6 +5,18 @@ import { getSocket } from '@/lib/socket'
 import { QUERY_KEYS } from '@/lib/constants'
 import api from '@/lib/api'
 import { Match, MatchEvent } from '@/types'
+import toast from 'react-hot-toast'
+
+const EVENT_EMOJI: Record<string, string> = {
+  goal: '⚽',
+  assist: '🎯',
+  yellow_card: '🟨',
+  red_card: '🟥',
+  clean_sheet: '🧤',
+  save: '🧤',
+  penalty_save: '🦸',
+  own_goal: '😬',
+}
 
 export function useLive() {
   const { matches, livePoints, setMatches, addEvent, updateMatchScore, setLivePoints } = useLiveStore()
@@ -37,8 +49,13 @@ export function useLive() {
     })
 
     socket.on('user:points', (...args: unknown[]) => {
-      const data = args[0] as { total_points: number; delta: number; event: MatchEvent }
+      const data = args[0] as { total_points: number; delta: number; event?: MatchEvent & { player_name?: string; event_type?: string } }
       setLivePoints(data.total_points)
+      if (data.delta > 0 && data.event) {
+        const emoji = EVENT_EMOJI[data.event.event_type ?? ''] ?? '⚽'
+        const name = data.event.player_name ?? 'Speler'
+        toast.success(`${emoji} ${name} · +${data.delta} punten (totaal: ${data.total_points})`, { duration: 5000 })
+      }
     })
 
     return () => {
