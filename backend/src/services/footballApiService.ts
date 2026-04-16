@@ -89,7 +89,7 @@ export async function fetchLiveMatches() {
   }
 }
 
-// ─── Fetch today + tomorrow fixtures voor dashboard ────────────────────────────
+// ─── Fetch today fixtures voor dashboard (1 API call via date param) ──────────
 
 let todayCache: { data: unknown[]; ts: number } | null = null
 
@@ -98,43 +98,35 @@ export async function fetchTodayFixtures() {
 
   try {
     const today = new Date().toISOString().split('T')[0]
-    const knownIds = Object.values(COMPETITIONS).map(c => c.id)
+    const knownIds = new Set(Object.values(COMPETITIONS).map(c => c.id))
 
-    // Haal per competitie de fixtures van vandaag op (parallel, max 5 tegelijk)
-    const chunks = knownIds.reduce<number[][]>((acc, id, i) => {
-      if (i % 5 === 0) acc.push([])
-      acc[acc.length - 1].push(id)
-      return acc
-    }, [])
+    // 1 API call voor alle wedstrijden van vandaag (bespaart 14 calls)
+    const response = await apiClient.get('/fixtures', { params: { date: today } })
+    const raw: unknown[] = response.data.response ?? []
 
-    const allFixtures: unknown[] = []
-
-    for (const chunk of chunks) {
-      const results = await Promise.allSettled(
-        chunk.map(leagueId =>
-          apiClient.get('/fixtures', { params: { league: leagueId, date: today, season: 2024 } })
-            .then(r => (r.data.response ?? []).map((f: any) => {
-              const meta = COMPETITION_BY_ID[leagueId] ?? { name: 'Unknown', flag: '⚽' }
-              return {
-                fixture_id:  f.fixture?.id,
-                home_team:   f.teams?.home?.name ?? '',
-                home_logo:   f.teams?.home?.logo ?? '',
-                away_team:   f.teams?.away?.name ?? '',
-                away_logo:   f.teams?.away?.logo ?? '',
-                home_score:  f.goals?.home,
-                away_score:  f.goals?.away,
-                kickoff:     f.fixture?.date,
-                status:      f.fixture?.status?.short ?? 'NS',
-                minute:      f.fixture?.status?.elapsed,
-                league_id:   leagueId,
-                league_name: meta.name,
-                league_flag: meta.flag,
-              }
-            }))
-        )
-      )
-      results.forEach(r => { if (r.status === 'fulfilled') allFixtures.push(...r.value as unknown[]) })
-    }
+    // Filter op bekende competities en verrijk met meta
+    const allFixtures = raw
+      .map((f: any) => {
+        const leagueId: number = f.league?.id
+        const meta = COMPETITION_BY_ID[leagueId] ?? null
+        if (!meta) return null
+        return {
+          fixture_id:  f.fixture?.id,
+          home_team:   f.teams?.home?.name ?? '',
+          home_logo:   f.teams?.home?.logo ?? '',
+          away_team:   f.teams?.away?.name ?? '',
+          away_logo:   f.teams?.away?.logo ?? '',
+          home_score:  f.goals?.home,
+          away_score:  f.goals?.away,
+          kickoff:     f.fixture?.date,
+          status:      f.fixture?.status?.short ?? 'NS',
+          minute:      f.fixture?.status?.elapsed,
+          league_id:   leagueId,
+          league_name: meta.name,
+          league_flag: meta.flag,
+        }
+      })
+      .filter((f): f is NonNullable<typeof f> => f !== null && knownIds.has(f.league_id))
 
     todayCache = { data: allFixtures, ts: Date.now() }
     return allFixtures

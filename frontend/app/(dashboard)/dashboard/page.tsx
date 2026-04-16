@@ -8,15 +8,8 @@ import { useLive } from '@/hooks/useLive'
 import { useTeam } from '@/hooks/useTeam'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
-import { mockCurrentUser, mockMatches, mockLeaderboard } from '@/lib/mockData'
+import { Skeleton } from '@/components/ui/Skeleton'
 import Link from 'next/link'
-
-const statCards = (user: typeof mockCurrentUser, livePoints: number, rank?: number, totalPoints?: number) => [
-  { label: 'Huidige Rang', value: rank ? `#${rank}` : '—', icon: Trophy, color: '#FFD700', delta: 'Ranglijst', positive: true },
-  { label: 'Totale Punten', value: totalPoints ? totalPoints.toLocaleString() : '—', icon: Star, color: '#00FF87', delta: 'Dit seizoen', positive: true },
-  { label: 'GW Punten', value: String(livePoints), icon: Zap, color: '#3B82F6', delta: 'Speelronde', positive: true },
-  { label: 'Coins', value: Number(user.balance_credits).toLocaleString(), icon: TrendingUp, color: '#9B59B6', delta: 'Saldo', positive: true },
-]
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
@@ -24,11 +17,18 @@ export default function DashboardPage() {
   const { data: leaderboard } = useLeaderboard()
   const { team, isLoading: teamLoading } = useTeam()
 
-  const currentUser = user ?? mockCurrentUser
-  const liveMatch = matches.find(m => m.status === 'live') ?? mockMatches.find(m => m.status === 'live')
+  const liveMatch = matches.find(m => {
+    const s = (m.status as string).toUpperCase()
+    return s === 'LIVE' || s === '1H' || s === '2H' || s === 'HT'
+  })
   const myRank = leaderboard?.entries?.find((e: { is_current_user?: boolean }) => e.is_current_user)?.rank
 
-  const stats = statCards(currentUser, livePoints || (team?.gameweek_points ?? 0), myRank, team?.total_points)
+  const stats = [
+    { label: 'Huidige Rang', value: myRank ? `#${myRank}` : '—', icon: Trophy, color: '#FFD700', delta: 'Ranglijst' },
+    { label: 'Totale Punten', value: team?.total_points ? team.total_points.toLocaleString() : '—', icon: Star, color: '#00FF87', delta: 'Dit seizoen' },
+    { label: 'GW Punten', value: String(livePoints || team?.gameweek_points || 0), icon: Zap, color: '#3B82F6', delta: 'Speelronde' },
+    { label: 'Coins', value: user ? Number(user.balance_credits).toLocaleString() : '—', icon: TrendingUp, color: '#9B59B6', delta: 'Saldo' },
+  ]
 
   return (
     <div className="space-y-6">
@@ -36,12 +36,12 @@ export default function DashboardPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black">
-            Welkom terug, <span className="text-[#00FF87]">{currentUser.username}</span>
+            Welkom terug, <span className="text-[#00FF87]">{user?.username ?? '...'}</span>
           </h1>
           <p className="text-gray-400 text-sm mt-1">Speelronde 28 · Eredivisie 2024/25</p>
         </div>
         <Badge variant="default" className="hidden sm:flex">
-          {currentUser.tier.toUpperCase()}
+          {(user?.tier ?? 'bronze').toUpperCase()}
         </Badge>
       </div>
 
@@ -56,9 +56,9 @@ export default function DashboardPage() {
             <span className="w-2.5 h-2.5 bg-[#00FF87] rounded-full animate-pulse" />
             <span className="font-semibold text-[#00FF87]">LIVE</span>
             <span className="text-white">
-              {liveMatch.home_team} {liveMatch.home_score}–{liveMatch.away_score} {liveMatch.away_team}
+              {liveMatch.home_team} {liveMatch.home_score ?? 0}–{liveMatch.away_score ?? 0} {liveMatch.away_team}
             </span>
-            <span className="text-gray-400 text-sm">{liveMatch.minute}&apos;</span>
+            {liveMatch.minute && <span className="text-gray-400 text-sm">{liveMatch.minute}&apos;</span>}
           </div>
           <Link href="/live" className="text-[#00FF87] text-sm font-medium hover:underline">
             Bekijk live →
@@ -80,7 +80,7 @@ export default function DashboardPage() {
                 <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ backgroundColor: `${stat.color}20` }}>
                   <stat.icon className="w-5 h-5" style={{ color: stat.color }} />
                 </div>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${stat.positive ? 'bg-[#00FF87]/10 text-[#00FF87]' : 'bg-red-500/10 text-red-400'}`}>
+                <span className="text-xs px-2 py-0.5 rounded-full bg-[#00FF87]/10 text-[#00FF87]">
                   {stat.delta}
                 </span>
               </div>
@@ -103,13 +103,7 @@ export default function DashboardPage() {
           {teamLoading ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
               {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-[#0A0E1A] rounded-xl p-3 flex items-center gap-3 animate-pulse">
-                  <div className="w-10 h-10 rounded-full bg-[#1E2A45] flex-shrink-0" />
-                  <div className="flex-1 space-y-1.5">
-                    <div className="h-3 bg-[#1E2A45] rounded w-3/4" />
-                    <div className="h-2.5 bg-[#1E2A45] rounded w-1/2" />
-                  </div>
-                </div>
+                <Skeleton key={i} className="h-16 rounded-xl" />
               ))}
             </div>
           ) : team && team.players.length > 0 ? (
@@ -181,74 +175,52 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Upcoming fixtures */}
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg">Aankomende Wedstrijden</h2>
-          <Link href="/live" className="text-[#00FF87] text-sm hover:underline">Alle →</Link>
-        </div>
-        <div className="grid sm:grid-cols-3 gap-3">
-          {mockMatches.slice(0, 3).map((match) => (
-            <div key={match.id} className="bg-[#0A0E1A] rounded-xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  match.status === 'live' ? 'bg-[#00FF87]/10 text-[#00FF87]' :
-                  match.status === 'finished' ? 'bg-gray-700 text-gray-400' :
-                  'bg-[#3B82F6]/10 text-[#3B82F6]'
-                }`}>
-                  {match.status === 'live' ? `${match.minute}'` : match.status === 'finished' ? 'Afgelopen' : 'Gepland'}
-                </span>
-                <span className="text-xs text-gray-500">{match.my_players_in_match.length} spelers</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium truncate">{match.home_team}</span>
-                <span className="text-sm font-black mx-2 text-[#00FF87]">{match.home_score}–{match.away_score}</span>
-                <span className="text-sm font-medium truncate text-right">{match.away_team}</span>
-              </div>
-              <p className="text-xs text-gray-500 mt-2 text-center">{match.my_points_from_match} punten verdiend</p>
-            </div>
-          ))}
-        </div>
-      </Card>
-
       {/* Mini leaderboard */}
-      <Card className="p-5">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="font-bold text-lg">Ranglijst Top 5</h2>
-          <Link href="/leaderboard" className="text-[#00FF87] text-sm hover:underline">Volledig →</Link>
-        </div>
-        <div className="space-y-2">
-          {(leaderboard?.entries ?? mockLeaderboard).slice(0, 5).map((entry) => (
-            <div key={entry.rank} className={`flex items-center gap-3 p-3 rounded-xl ${entry.is_current_user ? 'bg-[#00FF87]/10 border border-[#00FF87]/20' : 'bg-[#0A0E1A]'}`}>
-              <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
-                entry.rank === 1 ? 'bg-[#FFD700]/20 text-[#FFD700]' :
-                entry.rank === 2 ? 'bg-[#C0C0C0]/20 text-[#C0C0C0]' :
-                entry.rank === 3 ? 'bg-[#CD7F32]/20 text-[#CD7F32]' : 'bg-[#1E2A45] text-gray-400'
-              }`}>
-                {entry.rank}
-              </span>
-              <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold truncate">{entry.user.username}</p>
-                <p className="text-xs text-gray-500">{entry.total_points} pt</p>
-              </div>
-              <div className="text-right">
-                <p className="text-[#00FF87] font-bold text-sm">€{entry.prize}</p>
-                <div className="flex items-center gap-1 justify-end">
-                  {entry.previous_rank > entry.rank
-                    ? <ArrowUp className="w-3 h-3 text-[#00FF87]" />
-                    : entry.previous_rank < entry.rank
-                    ? <ArrowDown className="w-3 h-3 text-red-400" />
-                    : null
-                  }
-                  <span className="text-xs text-gray-600">
-                    {Math.abs(entry.previous_rank - entry.rank)}
-                  </span>
+      {leaderboard?.entries && leaderboard.entries.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-lg">Ranglijst Top 5</h2>
+            <Link href="/leaderboard" className="text-[#00FF87] text-sm hover:underline">Volledig →</Link>
+          </div>
+          <div className="space-y-2">
+            {leaderboard.entries.slice(0, 5).map((entry: {
+              rank: number
+              is_current_user?: boolean
+              user: { username: string }
+              total_points: number
+              prize?: number
+              previous_rank?: number
+            }) => (
+              <div key={entry.rank} className={`flex items-center gap-3 p-3 rounded-xl ${entry.is_current_user ? 'bg-[#00FF87]/10 border border-[#00FF87]/20' : 'bg-[#0A0E1A]'}`}>
+                <span className={`w-7 h-7 rounded-lg flex items-center justify-center text-xs font-bold ${
+                  entry.rank === 1 ? 'bg-[#FFD700]/20 text-[#FFD700]' :
+                  entry.rank === 2 ? 'bg-[#C0C0C0]/20 text-[#C0C0C0]' :
+                  entry.rank === 3 ? 'bg-[#CD7F32]/20 text-[#CD7F32]' : 'bg-[#1E2A45] text-gray-400'
+                }`}>
+                  {entry.rank}
+                </span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold truncate">{entry.user.username}</p>
+                  <p className="text-xs text-gray-500">{entry.total_points} pt</p>
                 </div>
+                {entry.previous_rank != null && (
+                  <div className="flex items-center gap-1 justify-end">
+                    {entry.previous_rank > entry.rank
+                      ? <ArrowUp className="w-3 h-3 text-[#00FF87]" />
+                      : entry.previous_rank < entry.rank
+                      ? <ArrowDown className="w-3 h-3 text-red-400" />
+                      : null
+                    }
+                    <span className="text-xs text-gray-600">
+                      {Math.abs(entry.previous_rank - entry.rank)}
+                    </span>
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
-        </div>
-      </Card>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

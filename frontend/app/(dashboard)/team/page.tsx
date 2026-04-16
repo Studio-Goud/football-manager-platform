@@ -28,6 +28,7 @@ export default function TeamPage() {
   useEffect(() => {
     if (team) {
       setFormationLocal(team.formation as Formation)
+      if (team.tactic_style) setTacticLocal(team.tactic_style as TacticStyle)
       setPlayers((team.players ?? []) as unknown as TeamPlayer[])
     }
   }, [team])

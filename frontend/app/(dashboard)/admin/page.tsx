@@ -88,6 +88,14 @@ export default function AdminPage() {
     api.post('/admin/seasons', { name: `Seizoen ${new Date().getFullYear()}` })
   )
 
+  const giveNewSeasonBonus = () => doAction('Startbonus uitdelen', async () => {
+    const res = await api.post('/admin/seasons/new-bonus')
+    const r = res.data?.data
+    if (r?.users_rewarded != null) {
+      toast.success(`✅ ${r.users_rewarded} gebruikers ontvingen 1000 startcoins`, { duration: 5000 })
+    }
+  })
+
   const suspendUser = (userId: string, suspend: boolean) => doAction(
     suspend ? 'Gebruiker suspenderen' : 'Gebruiker heractiveren',
     () => api.put(`/admin/users/${userId}/suspend`, { suspended: suspend })
@@ -171,6 +179,10 @@ export default function AdminPage() {
                 <Trophy className="w-4 h-4 mr-2" />
                 Nieuw seizoen aanmaken
               </Button>
+              <Button onClick={giveNewSeasonBonus} loading={actionLoading === 'Startbonus uitdelen'} className="w-full" variant="secondary">
+                <Zap className="w-4 h-4 mr-2" />
+                Startbonus uitdelen (1000 coins)
+              </Button>
             </div>
           </Card>
 
@@ -183,7 +195,7 @@ export default function AdminPage() {
               </div>
               <div className="flex justify-between py-1 border-b border-[#1E2A45]">
                 <span className="text-gray-400">Database</span>
-                <span className="text-[#00FF87]">SQLite</span>
+                <span className="text-[#00FF87]">PostgreSQL</span>
               </div>
               <div className="flex justify-between py-1 border-b border-[#1E2A45]">
                 <span className="text-gray-400">Test account</span>
@@ -250,15 +262,18 @@ export default function AdminPage() {
       {tab === 'data' && (
         <Card className="p-5">
           <h2 className="font-bold mb-4">Data management</h2>
-          <div className="bg-[#0A0E1A] rounded-xl p-4 text-sm font-mono text-gray-300 space-y-2">
-            <p className="text-[#00FF87]"># Beschikbare endpoints</p>
-            <p>GET /api/admin/stats</p>
+          <div className="bg-[#0A0E1A] rounded-xl p-4 text-sm font-mono text-gray-300 space-y-1.5">
+            <p className="text-[#00FF87]"># Spelers</p>
+            <p>POST /api/admin/sync-players/await</p>
+            <p className="text-[#00FF87] mt-2"># Seizoenen</p>
+            <p>GET /api/admin/seasons</p>
+            <p>POST /api/admin/seasons</p>
+            <p>POST /api/admin/seasons/:id/end</p>
+            <p>POST /api/admin/seasons/new-bonus</p>
+            <p className="text-[#00FF87] mt-2"># Gebruikers</p>
             <p>GET /api/admin/users</p>
             <p>PUT /api/admin/users/:id/suspend</p>
-            <p>POST /api/admin/seasons</p>
-            <p className="text-gray-500 mt-2"># Binnenkort</p>
-            <p className="text-gray-500">POST /api/admin/sync-players</p>
-            <p className="text-gray-500">POST /api/admin/score-gameweek</p>
+            <p>POST /api/admin/users/:id/coins</p>
           </div>
         </Card>
       )}

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Bot, RefreshCw, ArrowRight, TrendingUp, AlertCircle, CheckCircle, Minus } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import api from '@/lib/api'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -29,58 +30,6 @@ interface ScoutReport {
   tips: TransferTip[]
   tactic_advice: string
   generated_at: string
-}
-
-// ── Mock report for preview ───────────────────────────────────────────────────
-
-const MOCK_REPORT: ScoutReport = {
-  tactic_style: 'HIGH_PRESS',
-  tactic_label: 'Hoog Druk',
-  tactic_icon: '🔥',
-  manager_summary: 'Je team heeft sterke aanvalskwaliteit maar je verdediging laat te veel punten liggen. Met Hoog Druk laat je 12% liggen bij je middenvelders — overweeg één rotatie.',
-  tips: [
-    {
-      sell_player: 'Pedro Porro',
-      sell_club: 'Tottenham',
-      sell_position: 'DEF',
-      sell_price: 5.5,
-      buy_player: 'Alexander-Arnold',
-      buy_club: 'Liverpool',
-      buy_position: 'DEF',
-      buy_price: 7.5,
-      reason: '3 assists in laatste 4 wedstrijden. Liverpool thuis dit weekend = hoge kans op clean sheet én aanvalspunten.',
-      expected_gain: '+6 punten',
-      confidence: 'HOOG',
-    },
-    {
-      sell_player: 'Isak',
-      sell_club: 'Newcastle',
-      sell_position: 'FWD',
-      sell_price: 7.8,
-      buy_player: 'Haaland',
-      buy_club: 'Man City',
-      buy_position: 'FWD',
-      buy_price: 14.5,
-      reason: 'Haaland scoort in elke wedstrijd. Met Hoog Druk krijgt hij 25% bonus. Duur, maar de return is ongekend.',
-      expected_gain: '+10 punten',
-      confidence: 'HOOG',
-    },
-    {
-      sell_player: 'Raya',
-      sell_club: 'Arsenal',
-      sell_position: 'GK',
-      sell_price: 5.3,
-      buy_player: 'Flekken',
-      buy_club: 'Brentford',
-      buy_position: 'GK',
-      buy_price: 4.5,
-      reason: 'Arsenal speelt Man City — lage clean sheet kans. Flekken heeft 3 clean sheets in 4 wedstrijden.',
-      expected_gain: '+3 punten',
-      confidence: 'MIDDEL',
-    },
-  ],
-  tactic_advice: 'Je Hoog Druk tactiek past goed bij je aanvallers. Als je Haaland toevoegt, overweeg Counter-attack — dan krijgt hij 30% in plaats van 25%.',
-  generated_at: new Date().toISOString(),
 }
 
 // ── Sub-components ────────────────────────────────────────────────────────────
@@ -157,9 +106,12 @@ export function ScoutPanel() {
 
   const generate = async () => {
     setLoading(true)
-    // Simulate API call (replace with: fetch('/api/teams/my/scout'))
-    await new Promise(r => setTimeout(r, 2200))
-    setReport(MOCK_REPORT)
+    try {
+      const res = await api.get('/teams/my/scout')
+      setReport(res.data.data as ScoutReport)
+    } catch {
+      // Fallback: show a generic message
+    }
     setHasGenerated(true)
     setLoading(false)
   }

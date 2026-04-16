@@ -90,6 +90,7 @@ export interface Team {
   season_id: string
   name: string
   formation: Formation
+  tactic_style?: string
   players: TeamPlayer[]
   captain_id: string
   vice_captain_id: string

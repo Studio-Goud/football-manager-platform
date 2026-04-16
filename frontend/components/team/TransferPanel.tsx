@@ -6,6 +6,7 @@ import { Player, PlayerPosition } from '@/types'
 import { Search, X } from 'lucide-react'
 import { PlayerCard } from './PlayerCard'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { PlayerDetailModal } from '@/components/player/PlayerDetailModal'
 import api from '@/lib/api'
 
 interface TransferPanelProps {
@@ -27,6 +28,7 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
   const [position, setPosition] = useState<PlayerPosition | 'ALL'>('ALL')
   const [maxPrice, setMaxPrice] = useState(20)
   const [sortBy, setSortBy] = useState<'price' | 'form' | 'points'>('form')
+  const [detailPlayer, setDetailPlayer] = useState<Player | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['players', position, maxPrice, sortBy, search],
@@ -110,12 +112,19 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
           <div className="text-center text-gray-500 py-8 text-sm">Geen spelers gevonden</div>
         ) : (
           players.map(player => (
-            <PlayerCard
-              key={player.id}
-              player={player}
-              compact
-              onClick={() => onSelectPlayer(player)}
-            />
+            <div key={player.id} className="relative group">
+              <PlayerCard
+                player={player}
+                compact
+                onClick={() => onSelectPlayer(player)}
+              />
+              <button
+                onClick={(e) => { e.stopPropagation(); setDetailPlayer(player) }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-500 hover:text-[#00FF87] bg-[#0A0E1A] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+              >
+                info
+              </button>
+            </div>
           ))
         )}
       </div>
@@ -123,6 +132,13 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
       <div className="pt-3 border-t border-[#1E2A45] mt-2">
         <p className="text-xs text-gray-500 text-center">{players.length} spelers gevonden</p>
       </div>
+
+      <PlayerDetailModal
+        player={detailPlayer}
+        onClose={() => setDetailPlayer(null)}
+        onAddToTeam={onSelectPlayer}
+        showAddButton
+      />
     </div>
   )
 }

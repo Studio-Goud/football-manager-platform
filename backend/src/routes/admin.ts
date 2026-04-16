@@ -3,6 +3,7 @@ import prisma from '../config/database'
 import { sendSuccess, sendError } from '../utils/apiResponse'
 import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth'
 import { syncEredivisiePlayers } from '../services/syncPlayersService'
+import { processSeasonEndRewards, giveNewSeasonBonus } from '../services/seasonRewardService'
 import logger from '../config/logger'
 
 const router = Router()
@@ -150,6 +151,61 @@ router.post('/sync-players', async (_req: AuthRequest, res: Response): Promise<v
   }).catch(err => {
     logger.error('Achtergrond sync mislukt', { err })
   })
+})
+
+// POST /admin/seasons/:id/end — sluit seizoen af en deel beloningen uit
+router.post('/seasons/:id/end', async (req: AuthRequest, res: Response): Promise<void> => {
+  const seasonId = parseInt(req.params.id)
+  if (isNaN(seasonId)) { sendError(res, 'Ongeldig seizoen ID', 400); return }
+
+  try {
+    const season = await prisma.season.findUnique({ where: { id: seasonId } })
+    if (!season) { sendError(res, 'Seizoen niet gevonden', 404); return }
+    if (season.status === 'COMPLETED') { sendError(res, 'Seizoen al afgesloten', 400); return }
+
+    // Markeer seizoen als afgesloten
+    await prisma.season.update({ where: { id: seasonId }, data: { status: 'COMPLETED' } })
+
+    // Verwerk beloningen
+    await processSeasonEndRewards(seasonId)
+
+    sendSuccess(res, { season_id: seasonId }, 'Seizoen afgesloten en beloningen uitgedeeld')
+  } catch {
+    sendError(res, 'Afsluiten mislukt', 500)
+  }
+})
+
+// POST /admin/seasons/new-bonus — geef nieuw-seizoen bonus aan actieve gebruikers
+router.post('/seasons/new-bonus', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const count = await giveNewSeasonBonus()
+    sendSuccess(res, { users_rewarded: count }, `Nieuw-seizoen bonus gegeven aan ${count} gebruikers`)
+  } catch {
+    sendError(res, 'Bonus uitdelen mislukt', 500)
+  }
+})
+
+// GET /admin/seasons — overzicht van alle seizoenen
+router.get('/seasons', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const seasons = await prisma.season.findMany({
+      orderBy: { created_at: 'desc' },
+      include: { _count: { select: { teams: true, gameweeks: true } } },
+    })
+    sendSuccess(res, seasons.map(s => ({
+      id: s.id,
+      name: s.name,
+      status: s.status,
+      competition: s.competition,
+      start_date: s.start_date,
+      end_date: s.end_date,
+      total_pot: Number(s.total_pot),
+      team_count: s._count.teams,
+      gameweek_count: s._count.gameweeks,
+    })))
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
 })
 
 export default router
