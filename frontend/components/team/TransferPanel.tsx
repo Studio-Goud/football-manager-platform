@@ -1,14 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
 import { Player, PlayerPosition } from '@/types'
-import { Search, Filter, X } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { PlayerCard } from './PlayerCard'
-import { mockPlayers } from '@/lib/mockData'
+import { Skeleton } from '@/components/ui/Skeleton'
+import api from '@/lib/api'
 
 interface TransferPanelProps {
   onSelectPlayer: (player: Player) => void
-  excludeIds?: string[]
+  excludeIds?: (string | number)[]
   budget?: number
 }
 
@@ -26,16 +28,25 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
   const [maxPrice, setMaxPrice] = useState(20)
   const [sortBy, setSortBy] = useState<'price' | 'form' | 'points'>('form')
 
-  const players = mockPlayers
-    .filter(p => !excludeIds.includes(p.id))
-    .filter(p => position === 'ALL' || p.position === position)
-    .filter(p => p.price <= maxPrice)
-    .filter(p => p.name.toLowerCase().includes(search.toLowerCase()) || p.club.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => {
-      if (sortBy === 'price') return b.price - a.price
-      if (sortBy === 'form') return b.form - a.form
-      return b.total_points - a.total_points
-    })
+  const { data, isLoading } = useQuery({
+    queryKey: ['players', position, maxPrice, sortBy, search],
+    queryFn: async () => {
+      const params: Record<string, string> = {
+        per_page: '50',
+        sort: sortBy === 'points' ? 'points' : sortBy,
+        max_price: String(maxPrice),
+      }
+      if (position !== 'ALL') params.position = position
+      if (search) params.search = search
+      const res = await api.get('/players', { params })
+      return res.data.data as Player[]
+    },
+    staleTime: 30000,
+  })
+
+  const players = (data ?? [])
+    .filter(p => !excludeIds.map(String).includes(String(p.id)))
+    .filter(p => p.price <= budget)
 
   return (
     <div className="flex flex-col h-full">
@@ -91,7 +102,11 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
 
       {/* Results */}
       <div className="flex-1 overflow-y-auto space-y-2 pr-1">
-        {players.length === 0 ? (
+        {isLoading ? (
+          Array.from({ length: 5 }).map((_, i) => (
+            <Skeleton key={i} className="h-16 rounded-xl" />
+          ))
+        ) : players.length === 0 ? (
           <div className="text-center text-gray-500 py-8 text-sm">Geen spelers gevonden</div>
         ) : (
           players.map(player => (

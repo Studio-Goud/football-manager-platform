@@ -1,41 +1,43 @@
 'use client'
 
-import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useEffect } from 'react'
 import { Save, RefreshCw, Info } from 'lucide-react'
 import { useTeamStore } from '@/store/teamStore'
 import { Formation, Player, TeamPlayer } from '@/types'
 import { PitchView } from '@/components/team/PitchView'
 import { FormationSelector } from '@/components/team/FormationSelector'
-import { PlayerModal } from '@/components/team/PlayerModal'
 import { TransferPanel } from '@/components/team/TransferPanel'
 import { TacticSelector, TacticStyle } from '@/components/team/TacticSelector'
 import { TacticImpactPanel } from '@/components/team/TacticImpactPanel'
 import { ScoutPanel } from '@/components/team/ScoutPanel'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
-import { mockPlayers, mockTeam } from '@/lib/mockData'
+import { useTeam } from '@/hooks/useTeam'
 import toast from 'react-hot-toast'
 
 export default function TeamPage() {
-  const { team, setFormation } = useTeamStore()
-  const currentTeam = team ?? mockTeam
-  const [formation, setFormationLocal] = useState<Formation>(currentTeam.formation)
+  const { setFormation } = useTeamStore()
+  const { team, isLoading, saveTeam, isSaving } = useTeam()
+  const [formation, setFormationLocal] = useState<Formation>('4-4-2')
   const [tactic, setTacticLocal] = useState<TacticStyle>('BALANCED')
-  const [players, setPlayers] = useState<TeamPlayer[]>(
-    currentTeam.players.map(tp => ({
-      ...tp,
-      player: mockPlayers.find(p => p.id === tp.player_id),
-    })) as TeamPlayer[]
-  )
+  const [players, setPlayers] = useState<TeamPlayer[]>([])
+
+  // Initialiseer vanuit echte teamdata zodra die binnenkomt
+  useEffect(() => {
+    if (team) {
+      setFormationLocal(team.formation as Formation)
+      setPlayers((team.players ?? []) as unknown as TeamPlayer[])
+    }
+  }, [team])
   const [selectedPlayer, setSelectedPlayer] = useState<(TeamPlayer & { player?: Player }) | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
   const [showTransfer, setShowTransfer] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
+
 
   const budget = 100
-  const spent = players.reduce((sum, tp) => sum + ((tp.player as Player | undefined)?.price ?? 0), 0)
+  const spent = players.reduce((sum, tp) => sum + (Number((tp as any).player?.price ?? (tp as any).purchase_price ?? 0)), 0)
   const budgetRemaining = budget - spent
 
   const handleFormationChange = (f: Formation) => {
@@ -89,14 +91,25 @@ export default function TeamPage() {
     setSelectedPlayer(null)
   }
 
-  const handleSave = async () => {
-    setIsSaving(true)
-    await new Promise(r => setTimeout(r, 800))
-    setIsSaving(false)
-    toast.success('Team opgeslagen!')
+  const handleSave = () => {
+    if (!team?.id) { toast.error('Geen team gevonden'); return }
+    saveTeam(players)
   }
 
-  const excludedIds = players.map(p => p.player_id)
+  const excludedIds = players.map(p => (p as any).player_id ?? (p as any).player?.id)
+
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <Skeleton className="h-10 w-48 rounded-xl" />
+        <Skeleton className="h-16 rounded-xl" />
+        <div className="grid lg:grid-cols-5 gap-6">
+          <Skeleton className="lg:col-span-3 h-96 rounded-xl" />
+          <Skeleton className="lg:col-span-2 h-96 rounded-xl" />
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="space-y-6">
