@@ -153,6 +153,37 @@ cron.schedule('* * * * *', async () => {
         const mappedEvent = mapApiEventToScoring(apiEvent)
         if (!mappedEvent) continue
 
+        // Persist event to MatchPerformance
+        if (mappedEvent.player_id) {
+          try {
+            const dbPlayer = await prisma.player.findFirst({
+              where: { external_id: { contains: mappedEvent.player_id.toString() } },
+            })
+            if (dbPlayer) {
+              const updateData: Record<string, unknown> = { minutes_played: { increment: 0 } }
+              if (mappedEvent.event_type === 'goal')         updateData.goals = { increment: 1 }
+              else if (mappedEvent.event_type === 'assist')  updateData.assists = { increment: 1 }
+              else if (mappedEvent.event_type === 'yellow_card') updateData.yellow_cards = { increment: 1 }
+              else if (mappedEvent.event_type === 'red_card')    updateData.red_cards = { increment: 1 }
+              else if (mappedEvent.event_type === 'own_goal')    updateData.own_goals = { increment: 1 }
+
+              await prisma.matchPerformance.upsert({
+                where: { match_id_player_id: { match_id: dbMatch.id, player_id: dbPlayer.id } },
+                create: { match_id: dbMatch.id, player_id: dbPlayer.id, minutes_played: 60,
+                  goals: mappedEvent.event_type === 'goal' ? 1 : 0,
+                  assists: mappedEvent.event_type === 'assist' ? 1 : 0,
+                  yellow_cards: mappedEvent.event_type === 'yellow_card' ? 1 : 0,
+                  red_cards: mappedEvent.event_type === 'red_card' ? 1 : 0,
+                  own_goals: mappedEvent.event_type === 'own_goal' ? 1 : 0,
+                },
+                update: updateData,
+              })
+            }
+          } catch (err) {
+            logger.warn('MatchPerformance upsert failed', { err })
+          }
+        }
+
         // Emit event to match room
         io.to(`match:${dbMatch.id}`).emit('match:event', {
           match_id: dbMatch.id,
