@@ -1,37 +1,51 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { POWERUP_CONFIG } from '@/lib/constants'
 import { PowerupType } from '@/types'
-import { mockUserPowerups } from '@/lib/mockData'
 import { Zap, Lock } from 'lucide-react'
 import toast from 'react-hot-toast'
+import api from '@/lib/api'
 
 export default function PowerupsPage() {
   const { user } = useAuthStore()
-  const [purchasing, setPurchasing] = useState<PowerupType | null>(null)
-  const [userPowerups, setUserPowerups] = useState(mockUserPowerups)
-  const balance = user?.balance_credits ?? 47.5
+  const queryClient = useQueryClient()
+  const balance = user?.balance_credits ?? 0
 
-  const handlePurchase = async (type: PowerupType) => {
-    const cost = POWERUP_CONFIG[type].cost
-    if (balance < cost) {
-      toast.error('Onvoldoende credits')
-      return
-    }
-    setPurchasing(type)
-    await new Promise(r => setTimeout(r, 800))
-    setUserPowerups(prev => [...prev, { id: String(Date.now()), type, status: 'available', name: POWERUP_CONFIG[type].name, description: POWERUP_CONFIG[type].description, cost, active: false, purchased_at: new Date().toISOString() }])
-    setPurchasing(null)
-    toast.success(`${POWERUP_CONFIG[type].name} gekocht!`)
+  const { data: userPowerups = [] } = useQuery({
+    queryKey: ['powerups', 'my'],
+    queryFn: async () => {
+      const res = await api.get('/powerups/my')
+      return res.data.data ?? []
+    },
+  })
+
+  const buyMutation = useMutation({
+    mutationFn: async (type: string) => {
+      const res = await api.post('/powerups/buy', { type })
+      return res.data.data
+    },
+    onSuccess: (_data, type) => {
+      queryClient.invalidateQueries({ queryKey: ['powerups'] })
+      queryClient.invalidateQueries({ queryKey: ['user'] })
+      toast.success(`${POWERUP_CONFIG[type as PowerupType]?.name ?? type} gekocht!`)
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Aankoop mislukt')
+    },
+  })
+
+  const handlePurchase = (type: PowerupType) => {
+    buyMutation.mutate(type.toLowerCase())
   }
 
-  const availablePowerups = userPowerups.filter(p => p.status === 'available')
-  const usedPowerups = userPowerups.filter(p => p.status === 'used' || p.status === 'expired')
+  const availablePowerups = userPowerups.filter((p: { status: string }) => p.status === 'available')
+  const usedPowerups = userPowerups.filter((p: { status: string }) => p.status === 'used' || p.status === 'expired')
 
   return (
     <div className="space-y-6">
@@ -54,7 +68,7 @@ export default function PowerupsPage() {
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {(Object.entries(POWERUP_CONFIG) as [PowerupType, typeof POWERUP_CONFIG[PowerupType]][]).map(([type, config]) => {
-            const owned = userPowerups.filter(p => p.type === type && p.status === 'available').length
+            const owned = userPowerups.filter((p: { type: string; status: string }) => p.type === type && p.status === 'available').length
             const canAfford = balance >= config.cost
 
             return (
@@ -86,7 +100,7 @@ export default function PowerupsPage() {
                 {/* Buy button */}
                 <Button
                   onClick={() => handlePurchase(type)}
-                  loading={purchasing === type}
+                  loading={buyMutation.isPending && buyMutation.variables === type.toLowerCase()}
                   disabled={!canAfford}
                   variant={canAfford ? 'primary' : 'ghost'}
                   className="w-full"
@@ -107,8 +121,8 @@ export default function PowerupsPage() {
         <Card className="p-5">
           <h2 className="font-bold mb-4">Mijn Power-ups</h2>
           <div className="space-y-3">
-            {availablePowerups.map(pu => {
-              const config = POWERUP_CONFIG[pu.type]
+            {availablePowerups.map((pu: { id: string; type: string; status: string }) => {
+              const config = POWERUP_CONFIG[pu.type as PowerupType] ?? { name: pu.type, description: '', icon: '⚡', color: '#00FF87' }
               return (
                 <div key={pu.id} className="flex items-center gap-4 bg-[#0A0E1A] rounded-xl p-3">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: `${config.color}20` }}>
@@ -136,8 +150,8 @@ export default function PowerupsPage() {
         <Card className="p-5">
           <h2 className="font-bold mb-4 text-gray-400">Gebruikt</h2>
           <div className="space-y-2">
-            {usedPowerups.map(pu => {
-              const config = POWERUP_CONFIG[pu.type]
+            {usedPowerups.map((pu: { id: string; type: string; status: string }) => {
+              const config = POWERUP_CONFIG[pu.type as PowerupType] ?? { name: pu.type, icon: '⚡', color: '#666' }
               return (
                 <div key={pu.id} className="flex items-center gap-3 bg-[#0A0E1A] rounded-xl p-3 opacity-50">
                   <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg flex-shrink-0 grayscale" style={{ background: `${config.color}20` }}>
