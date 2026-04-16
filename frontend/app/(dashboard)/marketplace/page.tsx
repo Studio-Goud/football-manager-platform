@@ -12,8 +12,9 @@ import { PackShop } from '@/components/marketplace/PackShop'
 import { PriceChart } from '@/components/marketplace/PriceChart'
 import { PlayerModal } from '@/components/team/PlayerModal'
 import { Card } from '@/components/ui/Card'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { MarketplaceListing, Player } from '@/types'
-import { mockListings, mockPlayers, mockPriceHistory } from '@/lib/mockData'
+import { useTeam } from '@/hooks/useTeam'
 
 type Tab = 'market' | 'hot' | 'packs' | 'my_listings'
 
@@ -31,9 +32,13 @@ export default function MarketplacePage() {
     search: search || undefined,
     position: positionFilter || undefined,
   })
+  const { team } = useTeam()
 
-  const displayListings: MarketplaceListing[] = (listings.length > 0 ? listings : mockListings) as MarketplaceListing[]
-  const myListings = displayListings.filter((l: MarketplaceListing) => l.seller_id === (user?.id ?? 'user_001'))
+  const displayListings: MarketplaceListing[] = listings as MarketplaceListing[]
+  const myListings = displayListings.filter((l: MarketplaceListing) => l.seller_id === user?.id)
+
+  // Spelers die de user kan verkopen (uit hun team)
+  const sellablePlayers = team?.players?.map(tp => tp.player).filter(Boolean) as Player[] | undefined
 
   const tabs = [
     { key: 'market' as Tab, label: 'Markt', icon: List },
@@ -49,12 +54,14 @@ export default function MarketplacePage() {
           <h1 className="text-2xl font-black">Transfermarkt</h1>
           <p className="text-gray-400 text-sm mt-1">Koop en verkoop spelers · Fee: 5%</p>
         </div>
-        <button
-          onClick={() => setCreateModal(mockPlayers[0])}
-          className="bg-[#00FF87] text-[#0A0E1A] px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#00CC6A] transition-colors"
-        >
-          + Speler verkopen
-        </button>
+        {sellablePlayers && sellablePlayers.length > 0 && (
+          <button
+            onClick={() => setCreateModal(sellablePlayers[0])}
+            className="bg-[#00FF87] text-[#0A0E1A] px-4 py-2 rounded-xl text-sm font-bold hover:bg-[#00CC6A] transition-colors"
+          >
+            + Speler verkopen
+          </button>
+        )}
       </div>
 
       {/* Tabs */}
@@ -102,14 +109,19 @@ export default function MarketplacePage() {
           </div>
 
           {/* Price chart for selected */}
-          {selectedListing && (
+          {selectedListing && (selectedListing as any).player?.price_history && (
             <PriceChart
-              data={mockPriceHistory}
+              data={(selectedListing as any).player.price_history}
               playerName={selectedListing.player.name}
             />
           )}
 
           {/* Listings grid */}
+          {isLoading ? (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-40 rounded-xl" />)}
+            </div>
+          ) : null}
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
             {displayListings.map(listing => (
               <motion.div
@@ -144,7 +156,7 @@ export default function MarketplacePage() {
               Hot Spelers — Prijsstijgers
             </h2>
             <div className="space-y-3">
-              {(hotPlayers.length > 0 ? hotPlayers : mockListings.slice(0, 5)).map((listing, i) => (
+              {hotPlayers.slice(0, 5).map((listing, i) => (
                 <div key={listing.id} className="flex items-center gap-3 p-3 bg-[#0A0E1A] rounded-xl">
                   <span className="text-lg font-black text-gray-600 w-6">{i + 1}</span>
                   <div className="flex-1">
@@ -177,12 +189,14 @@ export default function MarketplacePage() {
           {myListings.length === 0 ? (
             <Card className="p-8 text-center">
               <p className="text-gray-500 mb-4">Je hebt nog geen actieve listings</p>
-              <button
-                onClick={() => setCreateModal(mockPlayers[0])}
-                className="bg-[#00FF87] text-[#0A0E1A] px-6 py-2.5 rounded-xl font-bold hover:bg-[#00CC6A] transition-colors text-sm"
-              >
-                Eerste speler verkopen
-              </button>
+              {sellablePlayers && sellablePlayers.length > 0 && (
+                <button
+                  onClick={() => setCreateModal(sellablePlayers[0])}
+                  className="bg-[#00FF87] text-[#0A0E1A] px-6 py-2.5 rounded-xl font-bold hover:bg-[#00CC6A] transition-colors text-sm"
+                >
+                  Eerste speler verkopen
+                </button>
+              )}
             </Card>
           ) : (
             <div className="grid sm:grid-cols-2 gap-4">
