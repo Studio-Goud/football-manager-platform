@@ -38,7 +38,10 @@ export default function DashboardPage() {
           <h1 className="text-2xl font-black">
             Welkom terug, <span className="text-[#00FF87]">{user?.username ?? '...'}</span>
           </h1>
-          <p className="text-gray-400 text-sm mt-1">Speelronde 28 · Eredivisie 2024/25</p>
+          <p className="text-gray-400 text-sm mt-1">
+            {leaderboard?.gameweek ? `Speelronde ${leaderboard.gameweek}` : 'Speelronde —'}
+            {' · Eredivisie 2024/25'}
+          </p>
         </div>
         <Badge variant="default" className="hidden sm:flex">
           {(user?.tier ?? 'bronze').toUpperCase()}
