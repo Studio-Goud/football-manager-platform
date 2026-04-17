@@ -117,6 +117,27 @@ export default function DashboardPage() {
         ))}
       </div>
 
+      {/* Rank climb motivator */}
+      {myRank && myRank > 1 && leaderboard?.entries && (() => {
+        const entries = leaderboard.entries
+        const myEntry = entries.find((e: { is_current_user?: boolean; total_points: number }) => e.is_current_user)
+        const aboveEntry = entries.find((e: { rank: number }) => e.rank === (myRank ?? 1) - 1) as { rank: number; user: { username: string }; total_points: number } | undefined
+        if (!myEntry || !aboveEntry) return null
+        const diff = aboveEntry.total_points - (myEntry as { total_points: number }).total_points
+        return (
+          <div className="bg-gradient-to-r from-[#00FF87]/5 to-transparent border border-[#00FF87]/15 rounded-xl p-4 flex items-center gap-4">
+            <div className="text-2xl">🏃</div>
+            <div className="flex-1">
+              <p className="font-bold text-sm">Nog <span className="text-[#00FF87]">{diff} punten</span> voor rang #{myRank - 1}</p>
+              <p className="text-xs text-gray-500 mt-0.5">Achtervolg {aboveEntry.user.username} ({aboveEntry.total_points} pt)</p>
+            </div>
+            <Link href="/leaderboard" className="text-xs text-[#00FF87] hover:underline flex-shrink-0">
+              Ranglijst →
+            </Link>
+          </div>
+        )
+      })()}
+
       {/* Points history chart */}
       {pointsHistory.length > 1 && (
         <Card className="p-5">
