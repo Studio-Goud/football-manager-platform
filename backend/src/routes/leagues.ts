@@ -255,6 +255,64 @@ router.get('/:id/leaderboard', authenticate, async (req: AuthRequest, res: Respo
   }
 })
 
+// GET /leagues/:id/messages — chat berichten ophalen (laatste 50)
+router.get('/:id/messages', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const league = await prisma.privateLeague.findUnique({ where: { id: req.params.id } })
+    if (!league) { sendError(res, 'Niet gevonden', 404); return }
+
+    const isMember = await prisma.privateLeagueMember.findFirst({
+      where: { private_league_id: req.params.id, user_id: req.user!.id },
+    })
+    if (!isMember) { sendError(res, 'Geen toegang', 403); return }
+
+    const messages = await prisma.leagueMessage.findMany({
+      where: { private_league_id: req.params.id },
+      include: { user: { select: { id: true, username: true, tier: true } } },
+      orderBy: { created_at: 'asc' },
+      take: 50,
+    })
+
+    sendSuccess(res, messages)
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// POST /leagues/:id/messages — bericht sturen
+router.post(
+  '/:id/messages',
+  authenticate,
+  [body('message').isString().trim().isLength({ min: 1, max: 300 })],
+  async (req: AuthRequest, res: Response): Promise<void> => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) { sendError(res, 'Ongeldig bericht', 400); return }
+
+    try {
+      const league = await prisma.privateLeague.findUnique({ where: { id: req.params.id } })
+      if (!league) { sendError(res, 'Niet gevonden', 404); return }
+
+      const isMember = await prisma.privateLeagueMember.findFirst({
+        where: { private_league_id: req.params.id, user_id: req.user!.id },
+      })
+      if (!isMember) { sendError(res, 'Geen toegang', 403); return }
+
+      const msg = await prisma.leagueMessage.create({
+        data: {
+          private_league_id: req.params.id,
+          user_id: req.user!.id,
+          message: req.body.message.trim(),
+        },
+        include: { user: { select: { id: true, username: true, tier: true } } },
+      })
+
+      sendSuccess(res, msg, 'Bericht verzonden', 201)
+    } catch {
+      sendError(res, 'Verzenden mislukt', 500)
+    }
+  }
+)
+
 // DELETE /leagues/:id/leave — verlaten
 router.delete('/:id/leave', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {

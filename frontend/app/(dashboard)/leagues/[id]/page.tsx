@@ -3,9 +3,9 @@
 import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Crown, Trophy, LogOut, Users, X } from 'lucide-react'
+import { ArrowLeft, Crown, Trophy, LogOut, Users, X, Send, MessageCircle } from 'lucide-react'
 import Link from 'next/link'
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -90,6 +90,14 @@ function TeamViewModal({ userId, username, onClose }: { userId: string; username
   )
 }
 
+interface LeagueMessage {
+  id: number
+  user_id: string
+  message: string
+  created_at: string
+  user: { id: string; username: string; tier: UserTier }
+}
+
 interface LeaderboardEntry {
   rank: number
   user_id: string
@@ -115,6 +123,28 @@ export default function LeagueDetailPage() {
   })
 
   const [viewTeam, setViewTeam] = useState<{ userId: string; username: string } | null>(null)
+  const [chatMsg, setChatMsg] = useState('')
+  const chatEndRef = useRef<HTMLDivElement>(null)
+
+  const { data: messages = [], refetch: refetchMessages } = useQuery({
+    queryKey: ['league-messages', id],
+    queryFn: async () => {
+      const res = await api.get(`/leagues/${id}/messages`)
+      return res.data.data as LeagueMessage[]
+    },
+    enabled: !!id,
+    refetchInterval: 10000,
+  })
+
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages.length])
+
+  const sendMessage = useMutation({
+    mutationFn: (message: string) => api.post(`/leagues/${id}/messages`, { message }),
+    onSuccess: () => { setChatMsg(''); refetchMessages() },
+    onError: () => toast.error('Verzenden mislukt'),
+  })
 
   const leaveMutation = useMutation({
     mutationFn: () => api.delete(`/leagues/${id}/leave`),
@@ -276,6 +306,57 @@ export default function LeagueDetailPage() {
             })}
           </div>
         )}
+      </Card>
+
+      {/* League Chat */}
+      <Card className="overflow-hidden">
+        <div className="p-4 border-b border-[#1E2A45] flex items-center gap-2">
+          <MessageCircle className="w-4 h-4 text-[#3B82F6]" />
+          <h2 className="font-bold">Chat</h2>
+        </div>
+
+        <div className="h-64 overflow-y-auto p-4 space-y-3">
+          {messages.length === 0 ? (
+            <p className="text-center text-gray-500 text-sm py-8">Nog geen berichten. Begin het gesprek!</p>
+          ) : (
+            messages.map(msg => {
+              const isMe = msg.user_id === user?.id
+              return (
+                <div key={msg.id} className={`flex gap-2 ${isMe ? 'flex-row-reverse' : ''}`}>
+                  <div className="w-6 h-6 rounded-full bg-[#1E2A45] flex items-center justify-center flex-shrink-0 text-[9px] font-bold text-gray-400">
+                    {msg.user.username[0].toUpperCase()}
+                  </div>
+                  <div className={`max-w-[75%] ${isMe ? 'items-end' : 'items-start'} flex flex-col gap-0.5`}>
+                    {!isMe && <span className="text-[9px] text-gray-500 px-1">{msg.user.username}</span>}
+                    <div className={`px-3 py-2 rounded-2xl text-sm ${isMe ? 'bg-[#00FF87] text-[#0A0E1A] font-medium rounded-tr-sm' : 'bg-[#1E2A45] text-white rounded-tl-sm'}`}>
+                      {msg.message}
+                    </div>
+                  </div>
+                </div>
+              )
+            })
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        <div className="p-3 border-t border-[#1E2A45] flex gap-2">
+          <input
+            type="text"
+            value={chatMsg}
+            onChange={e => setChatMsg(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Enter' && chatMsg.trim()) sendMessage.mutate(chatMsg) }}
+            placeholder="Schrijf een bericht..."
+            maxLength={300}
+            className="flex-1 bg-[#0A0E1A] border border-[#1E2A45] rounded-xl px-4 py-2.5 text-sm text-white placeholder-gray-600 focus:outline-none focus:border-[#3B82F6]"
+          />
+          <button
+            onClick={() => { if (chatMsg.trim()) sendMessage.mutate(chatMsg) }}
+            disabled={!chatMsg.trim() || sendMessage.isPending}
+            className="w-10 h-10 flex items-center justify-center bg-[#3B82F6] rounded-xl hover:bg-[#2563EB] disabled:opacity-40 transition-colors flex-shrink-0"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
       </Card>
 
       <AnimatePresence>

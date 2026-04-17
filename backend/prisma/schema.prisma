@@ -38,6 +38,7 @@ model User {
   duels_as_challenger  Duel[]                @relation("DuelChallenger")
   duels_as_opponent    Duel[]                @relation("DuelOpponent")
   private_league_memberships PrivateLeagueMember[]
+  league_messages            LeagueMessage[]
 
   @@map("users")
 }
@@ -386,7 +387,8 @@ model PrivateLeague {
   created_at     DateTime @default(now())
   updated_at     DateTime @updatedAt
 
-  members PrivateLeagueMember[]
+  members  PrivateLeagueMember[]
+  messages LeagueMessage[]
 
   @@map("private_leagues")
 }
@@ -403,6 +405,19 @@ model PrivateLeagueMember {
 
   @@unique([private_league_id, user_id])
   @@map("private_league_members")
+}
+
+model LeagueMessage {
+  id                Int      @id @default(autoincrement())
+  private_league_id String
+  user_id           String
+  message           String
+  created_at        DateTime @default(now())
+
+  private_league PrivateLeague @relation(fields: [private_league_id], references: [id], onDelete: Cascade)
+  user           User          @relation(fields: [user_id], references: [id])
+
+  @@map("league_messages")
 }
 
 model ResponsibleGaming {
