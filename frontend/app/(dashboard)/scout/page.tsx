@@ -6,6 +6,7 @@ import { useQuery } from '@tanstack/react-query'
 import { Telescope, Flame, TrendingUp, Star, Users } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { PlayerCompareModal } from '@/components/player/PlayerCompareModal'
 import { Player } from '@/types'
 import api from '@/lib/api'
@@ -87,7 +88,7 @@ export default function ScoutPage() {
   const [activePos, setActivePos] = useState<Position>('MID')
   const [comparePlayer, setComparePlayer] = useState<Player | null>(null)
 
-  const { data: bestValue, isLoading } = useQuery({
+  const { data: bestValue, isLoading, isError, refetch } = useQuery({
     queryKey: ['best-value'],
     queryFn: async () => {
       const res = await api.get('/players/best-value')
@@ -197,7 +198,9 @@ export default function ScoutPage() {
           ))}
         </div>
 
-        {isLoading ? (
+        {isError ? (
+          <ErrorState message="Spelerdata laden mislukt" onRetry={() => refetch()} compact />
+        ) : isLoading ? (
           <div className="space-y-3">
             {[1,2,3,4,5].map(i => <Skeleton key={i} className="h-14 rounded-xl" />)}
           </div>

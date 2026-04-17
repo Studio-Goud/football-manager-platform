@@ -9,6 +9,7 @@ import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge, TierBadge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { ErrorState } from '@/components/ui/ErrorState'
 import { useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/lib/constants'
 
@@ -16,7 +17,7 @@ type ViewMode = 'season' | 'gameweek'
 
 export default function LeaderboardPage() {
   const { user } = useAuthStore()
-  const { data: leaderboard, isLoading } = useLeaderboard()
+  const { data: leaderboard, isLoading, isError, refetch } = useLeaderboard()
   const [viewMode, setViewMode] = useState<ViewMode>('season')
   const [liveRefreshed, setLiveRefreshed] = useState(false)
   const qc = useQueryClient()
@@ -158,7 +159,11 @@ export default function LeaderboardPage() {
         <div className="p-4 border-b border-[#1E2A45]">
           <h2 className="font-bold">Volledige Ranglijst</h2>
         </div>
-        {isLoading ? (
+        {isError ? (
+          <div className="p-4">
+            <ErrorState message="Ranglijst laden mislukt" onRetry={() => refetch()} compact />
+          </div>
+        ) : isLoading ? (
           <div className="divide-y divide-[#1E2A45]">
             {Array.from({ length: 8 }).map((_, i) => (
               <div key={i} className="flex items-center gap-3 px-4 py-3">
