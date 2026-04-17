@@ -16,13 +16,16 @@ router.use(authenticate, requireAdmin)
 // GET /admin/stats
 router.get('/stats', async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const [totalUsers, totalTeams, totalPlayers, activeMatches, totalTransactions, coinSum] = await Promise.all([
+    const [totalUsers, totalTeams, totalPlayers, activeMatches, totalTransactions, coinSum, totalAchievements, totalLeagues, activeSeason] = await Promise.all([
       prisma.user.count(),
       prisma.team.count(),
       prisma.player.count(),
       prisma.match.count({ where: { status: 'LIVE' } }),
       prisma.transaction.count(),
       prisma.user.aggregate({ _sum: { balance_credits: true } }),
+      prisma.userAchievement.count(),
+      prisma.privateLeague.count(),
+      prisma.season.findFirst({ where: { status: 'ACTIVE' }, select: { name: true, id: true } }),
     ])
 
     sendSuccess(res, {
@@ -32,6 +35,9 @@ router.get('/stats', async (_req: AuthRequest, res: Response): Promise<void> => 
       active_matches: activeMatches,
       total_transactions: totalTransactions,
       total_coins_in_circulation: Number(coinSum._sum.balance_credits ?? 0),
+      total_achievements_earned: totalAchievements,
+      total_private_leagues: totalLeagues,
+      active_season: activeSeason?.name ?? null,
     })
   } catch {
     sendError(res, 'Ophalen mislukt', 500)

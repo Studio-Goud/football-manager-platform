@@ -1,14 +1,15 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, Users, Trophy, Zap, RefreshCw, CheckCircle, AlertCircle, Database } from 'lucide-react'
+import { Shield, Users, Trophy, Zap, RefreshCw, CheckCircle, AlertCircle, Database, Calendar, Play, Square } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/store/authStore'
 import api from '@/lib/api'
 import { useRouter } from 'next/navigation'
 import toast from 'react-hot-toast'
+import { useQuery } from '@tanstack/react-query'
 
 interface AdminStats {
   total_users: number
@@ -17,6 +18,9 @@ interface AdminStats {
   active_matches: number
   total_transactions: number
   total_coins_in_circulation: number
+  total_achievements_earned: number
+  total_private_leagues: number
+  active_season: string | null
 }
 
 interface AdminUser {
@@ -36,7 +40,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'overview' | 'users' | 'data'>('overview')
+  const [tab, setTab] = useState<'overview' | 'users' | 'seasons' | 'data'>('overview')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   useEffect(() => {
@@ -149,6 +153,8 @@ export default function AdminPage() {
             { label: 'Live Wedstrijden', value: stats.active_matches, icon: Database, color: '#EF4444' },
             { label: 'Transacties', value: stats.total_transactions, icon: CheckCircle, color: '#8B5CF6' },
             { label: 'Coins in Omloop', value: stats.total_coins_in_circulation, icon: AlertCircle, color: '#F59E0B' },
+            { label: 'Badges verdiend', value: stats.total_achievements_earned, icon: CheckCircle, color: '#EC4899' },
+            { label: 'Privé Competities', value: stats.total_private_leagues, icon: Trophy, color: '#14B8A6' },
           ].map((s, i) => (
             <motion.div key={i} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.06 }}>
               <Card className="p-4">
@@ -169,11 +175,11 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div className="flex gap-2">
-        {(['overview', 'users', 'data'] as const).map(t => (
+        {(['overview', 'users', 'seasons', 'data'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === t ? 'bg-[#00FF87] text-black' : 'bg-[#162040] text-gray-400 hover:text-white'}`}
           >
-            {t === 'overview' ? 'Overzicht' : t === 'users' ? 'Gebruikers' : 'Data'}
+            {t === 'overview' ? 'Overzicht' : t === 'users' ? 'Gebruikers' : t === 'seasons' ? 'Seizoenen' : 'Data'}
           </button>
         ))}
       </div>
@@ -279,6 +285,11 @@ export default function AdminPage() {
         </Card>
       )}
 
+      {/* Seasons */}
+      {tab === 'seasons' && (
+        <SeasonManager stats={stats} doAction={doAction} actionLoading={actionLoading} />
+      )}
+
       {/* Data */}
       {tab === 'data' && (
         <Card className="p-5">
@@ -298,6 +309,92 @@ export default function AdminPage() {
           </div>
         </Card>
       )}
+    </div>
+  )
+}
+
+interface Season {
+  id: number
+  name: string
+  status: string
+  competition: string
+  start_date: string | null
+  end_date: string | null
+  total_pot: number
+  team_count: number
+  gameweek_count: number
+}
+
+function SeasonManager({ stats, doAction, actionLoading }: {
+  stats: AdminStats | null
+  doAction: (label: string, fn: () => Promise<void>) => Promise<void>
+  actionLoading: string | null
+}) {
+  const { data: seasons = [], refetch } = useQuery<Season[]>({
+    queryKey: ['admin-seasons'],
+    queryFn: async () => {
+      const res = await api.get('/admin/seasons')
+      return res.data.data ?? []
+    },
+  })
+
+  const endSeason = async (id: number) => {
+    await doAction('Seizoen beëindigen', async () => {
+      await api.post(`/admin/seasons/${id}/end`)
+      refetch()
+    })
+  }
+
+  return (
+    <div className="space-y-4">
+      {stats?.active_season && (
+        <Card className="p-4 border border-[#00FF87]/20">
+          <div className="flex items-center gap-3">
+            <div className="w-2 h-2 bg-[#00FF87] rounded-full animate-pulse" />
+            <p className="font-bold text-[#00FF87]">Actief seizoen: {stats.active_season}</p>
+          </div>
+        </Card>
+      )}
+
+      <Card className="p-0 overflow-hidden">
+        <div className="p-4 border-b border-[#1E2A45] flex items-center justify-between">
+          <h2 className="font-bold flex items-center gap-2">
+            <Calendar className="w-4 h-4 text-[#00FF87]" />
+            Seizoenen ({seasons.length})
+          </h2>
+        </div>
+        {seasons.length === 0 ? (
+          <div className="p-8 text-center text-gray-500">Geen seizoenen gevonden</div>
+        ) : (
+          <div className="divide-y divide-[#1E2A45]">
+            {seasons.map(s => (
+              <div key={s.id} className="flex items-center gap-3 px-4 py-3">
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${s.status === 'ACTIVE' ? 'bg-[#00FF87] animate-pulse' : s.status === 'ENDED' ? 'bg-gray-600' : 'bg-yellow-400'}`} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{s.name}</p>
+                  <p className="text-xs text-gray-500">
+                    {s.competition} · {s.team_count} teams · {s.gameweek_count} speelrondes · {s.total_pot.toLocaleString()} coins pot
+                  </p>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                  s.status === 'ACTIVE' ? 'bg-[#00FF87]/10 text-[#00FF87]' :
+                  s.status === 'ENDED' ? 'bg-gray-700 text-gray-400' :
+                  'bg-yellow-400/10 text-yellow-400'
+                }`}>{s.status}</span>
+                {s.status === 'ACTIVE' && (
+                  <button
+                    onClick={() => endSeason(s.id)}
+                    disabled={actionLoading === 'Seizoen beëindigen'}
+                    className="text-xs px-2 py-1 bg-red-400/10 text-red-400 rounded-lg hover:bg-red-400/20 transition-colors flex-shrink-0"
+                  >
+                    <Square className="w-3 h-3" />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
     </div>
   )
 }
