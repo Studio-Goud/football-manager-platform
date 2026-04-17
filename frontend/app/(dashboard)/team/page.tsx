@@ -1,7 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Info, Lock } from 'lucide-react'
+import { Save, RefreshCw, Info, Lock, ArrowUpRight, ArrowDownLeft, History } from 'lucide-react'
+import { useQuery } from '@tanstack/react-query'
 import { useTeamStore } from '@/store/teamStore'
 import { Formation, Player, TeamPlayer } from '@/types'
 import { PitchView } from '@/components/team/PitchView'
@@ -15,9 +16,15 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { useTeam } from '@/hooks/useTeam'
-import { useQuery } from '@tanstack/react-query'
 import api from '@/lib/api'
 import toast from 'react-hot-toast'
+
+interface TransferEntry {
+  id: string
+  type: 'transfer_in' | 'transfer_out'
+  description: string
+  date: string
+}
 
 export default function TeamPage() {
   const { setFormation } = useTeamStore()
@@ -31,6 +38,15 @@ export default function TeamPage() {
       return res.data.data as { deadline: string; number: number }
     },
     staleTime: 60000,
+  })
+
+  const { data: transfers = [] } = useQuery({
+    queryKey: ['my-transfers'],
+    queryFn: async () => {
+      const res = await api.get('/teams/my/transfers')
+      return res.data.data as TransferEntry[]
+    },
+    staleTime: 30000,
   })
 
   const isDeadlinePassed = gameweek?.deadline ? new Date(gameweek.deadline) < new Date() : false
@@ -349,6 +365,40 @@ export default function TeamPage() {
           </Card>
         </div>
       </div>
+
+      {/* Transfer History */}
+      {transfers.length > 0 && (
+        <Card className="p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <History className="w-4 h-4 text-gray-400" />
+            <h3 className="font-bold text-sm">Transfer Geschiedenis</h3>
+            <span className="text-xs text-gray-500 ml-auto">Laatste {Math.min(transfers.length, 20)}</span>
+          </div>
+          <div className="space-y-2">
+            {transfers.slice(0, 20).map(t => (
+              <div key={t.id} className="flex items-center gap-3 py-2 border-b border-[#1E2A45] last:border-0">
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 ${t.type === 'transfer_in' ? 'bg-[#00FF87]/10' : 'bg-red-500/10'}`}>
+                  {t.type === 'transfer_in'
+                    ? <ArrowDownLeft className="w-3.5 h-3.5 text-[#00FF87]" />
+                    : <ArrowUpRight className="w-3.5 h-3.5 text-red-400" />
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">
+                    {t.description.replace('Transfer in: ', '').replace('Transfer out: ', '')}
+                  </p>
+                </div>
+                <span className={`text-xs font-bold flex-shrink-0 ${t.type === 'transfer_in' ? 'text-[#00FF87]' : 'text-red-400'}`}>
+                  {t.type === 'transfer_in' ? 'IN' : 'UIT'}
+                </span>
+                <span className="text-xs text-gray-500 flex-shrink-0">
+                  {new Date(t.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                </span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }

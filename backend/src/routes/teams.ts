@@ -396,4 +396,104 @@ router.get('/my/points-history', authenticate, async (req: AuthRequest, res: Res
   }
 })
 
+// PUT /teams/:id — save team lineup (add/remove players, log transfers)
+router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { id } = req.params
+    const { players } = req.body as { players: Array<{ player_id: string; slot: string; is_captain?: boolean; is_vice_captain?: boolean }> }
+
+    const team = await prisma.team.findFirst({ where: { id, user_id: req.user!.id } })
+    if (!team) {
+      sendError(res, 'Team niet gevonden', 404)
+      return
+    }
+
+    // Get current player IDs to detect transfers
+    const currentPlayers = await prisma.teamPlayer.findMany({ where: { team_id: id } })
+    const currentPlayerIds = new Set(currentPlayers.map(p => p.player_id.toString()))
+    const newPlayerIds = new Set(players.map(p => p.player_id.toString()))
+
+    // Detect in/out
+    const transfersOut = [...currentPlayerIds].filter(pid => !newPlayerIds.has(pid))
+    const transfersIn = [...newPlayerIds].filter(pid => !currentPlayerIds.has(pid))
+
+    // Replace all team players
+    await prisma.teamPlayer.deleteMany({ where: { team_id: id } })
+
+    if (players.length > 0) {
+      await prisma.teamPlayer.createMany({
+        data: players.map(p => ({
+          team_id: id,
+          player_id: parseInt(p.player_id),
+          slot_position: p.slot,
+          is_captain: p.is_captain ?? false,
+          is_vice_captain: p.is_vice_captain ?? false,
+          purchase_price: 0,
+        })),
+      })
+    }
+
+    // Log transfer history in Transaction table
+    const transferLogs: Array<{ user_id: string; type: string; amount: number; credits_amount: number; status: string; description: string }> = []
+
+    for (const pid of transfersOut) {
+      const player = await prisma.player.findUnique({ where: { id: parseInt(pid) } })
+      if (player) {
+        transferLogs.push({
+          user_id: req.user!.id,
+          type: 'transfer_out',
+          amount: 0,
+          credits_amount: 0,
+          status: 'COMPLETED',
+          description: `Transfer out: ${player.name} (${player.position})`,
+        })
+      }
+    }
+    for (const pid of transfersIn) {
+      const player = await prisma.player.findUnique({ where: { id: parseInt(pid) } })
+      if (player) {
+        transferLogs.push({
+          user_id: req.user!.id,
+          type: 'transfer_in',
+          amount: 0,
+          credits_amount: 0,
+          status: 'COMPLETED',
+          description: `Transfer in: ${player.name} (${player.position})`,
+        })
+      }
+    }
+
+    if (transferLogs.length > 0) {
+      await prisma.transaction.createMany({ data: transferLogs })
+    }
+
+    sendSuccess(res, { id }, 'Team opgeslagen')
+  } catch {
+    sendError(res, 'Opslaan mislukt', 500)
+  }
+})
+
+// GET /teams/my/transfers — transfer history for current user
+router.get('/my/transfers', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const transfers = await prisma.transaction.findMany({
+      where: {
+        user_id: req.user!.id,
+        type: { in: ['transfer_in', 'transfer_out'] },
+      },
+      orderBy: { created_at: 'desc' },
+      take: 50,
+    })
+
+    sendSuccess(res, transfers.map(t => ({
+      id: t.id,
+      type: t.type,
+      description: t.description,
+      date: t.created_at,
+    })))
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 export default router
