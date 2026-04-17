@@ -1,7 +1,8 @@
 'use client'
 
-import { motion } from 'framer-motion'
-import { Trophy, TrendingUp, Zap, ArrowUp, ArrowDown, Star, Users, Calendar, Target, ChevronRight } from 'lucide-react'
+import { useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Trophy, TrendingUp, Zap, ArrowUp, ArrowDown, Star, Users, Calendar, Target, ChevronRight, BarChart2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { useLive } from '@/hooks/useLive'
@@ -13,12 +14,14 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import api from '@/lib/api'
 import Link from 'next/link'
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
+import { RoundReportModal } from '@/components/team/RoundReportModal'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { livePoints, matches } = useLive()
   const { data: leaderboard } = useLeaderboard()
   const { team, isLoading: teamLoading } = useTeam()
+  const [showRoundReport, setShowRoundReport] = useState(false)
 
   interface WeeklyChallenge {
     id: string; title: string; description: string; icon: string
@@ -87,6 +90,11 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6">
+      {/* Round Report Modal */}
+      <AnimatePresence>
+        {showRoundReport && <RoundReportModal onClose={() => setShowRoundReport(false)} />}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -98,9 +106,18 @@ export default function DashboardPage() {
             {' · Eredivisie 2024/25'}
           </p>
         </div>
-        <Badge variant="default" className="hidden sm:flex">
-          {(user?.tier ?? 'bronze').toUpperCase()}
-        </Badge>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowRoundReport(true)}
+            className="flex items-center gap-1.5 px-3 py-2 bg-[#1E2A45] rounded-xl text-xs font-bold text-gray-300 hover:text-white hover:bg-[#2D3A55] transition-colors"
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">GW Rapport</span>
+          </button>
+          <Badge variant="default" className="hidden sm:flex">
+            {(user?.tier ?? 'bronze').toUpperCase()}
+          </Badge>
+        </div>
       </div>
 
       {/* Live alert */}

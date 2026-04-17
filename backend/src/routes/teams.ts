@@ -396,6 +396,76 @@ router.get('/my/points-history', authenticate, async (req: AuthRequest, res: Res
   }
 })
 
+// GET /teams/my/round-report — speelronde rapport voor de meest recente afgeronde GW
+router.get('/my/round-report', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const team = await prisma.team.findFirst({
+      where: { user_id: req.user!.id, ...(currentSeason ? { season_id: currentSeason.id } : {}) },
+      include: { players: { include: { player: true } } },
+      orderBy: { created_at: 'desc' },
+    })
+    if (!team) { sendSuccess(res, null); return }
+
+    // Most recent finished gameweek for this team
+    const lastGw = await prisma.teamGameweek.findFirst({
+      where: { team_id: team.id },
+      include: { gameweek: true },
+      orderBy: { gameweek_id: 'desc' },
+    })
+    if (!lastGw) { sendSuccess(res, null); return }
+
+    // Player performances in that gameweek
+    const matchIds = (await prisma.match.findMany({
+      where: { gameweek_id: lastGw.gameweek_id },
+      select: { id: true },
+    })).map(m => m.id)
+
+    const playerIds = team.players.map(tp => tp.player_id)
+    const perfs = await prisma.matchPerformance.findMany({
+      where: { match_id: { in: matchIds }, player_id: { in: playerIds } },
+      include: { player: { select: { name: true, position: true } } },
+    })
+
+    let bestPlayer = null
+    let worstPlayer = null
+    let bestPts = -Infinity
+    let worstPts = Infinity
+
+    for (const p of perfs) {
+      const pts = Number(p.total_points)
+      if (pts > bestPts) { bestPts = pts; bestPlayer = { name: p.player.name, points: pts } }
+      if (pts < worstPts) { worstPts = pts; worstPlayer = { name: p.player.name, points: pts } }
+    }
+
+    // League rank at this GW
+    const allTeamGws = await prisma.teamGameweek.findMany({
+      where: { gameweek_id: lastGw.gameweek_id },
+      orderBy: { points: 'desc' },
+    })
+    const rank = allTeamGws.findIndex(tg => tg.team_id === team.id) + 1
+    const avgPoints = allTeamGws.reduce((s, tg) => s + Number(tg.points), 0) / (allTeamGws.length || 1)
+
+    const captainPerf = team.captain_player_id
+      ? perfs.find(p => p.player_id === team.captain_player_id)
+      : null
+
+    sendSuccess(res, {
+      gameweek: lastGw.gameweek.number,
+      total_points: Number(lastGw.points),
+      rank,
+      total_participants: allTeamGws.length,
+      best_player: bestPlayer,
+      worst_player: worstPlayer,
+      captain_bonus: captainPerf ? Number(captainPerf.total_points) : 0,
+      avg_league_score: Math.round(avgPoints),
+      points_difference: Math.round(Number(lastGw.points) - avgPoints),
+    })
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 // GET /teams/user/:userId — public view of another user's team
 router.get('/user/:userId', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
