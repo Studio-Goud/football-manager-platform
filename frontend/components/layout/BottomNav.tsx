@@ -7,6 +7,8 @@ import { Users, ShoppingCart, Telescope, User, LayoutDashboard, Grid, Trophy, Sw
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import api from '@/lib/api'
 
 const primaryNav = [
   { label: 'Home',    href: '/dashboard',    icon: LayoutDashboard },
@@ -30,6 +32,16 @@ export function BottomNav() {
   const [moreOpen, setMoreOpen] = useState(false)
 
   const isMoreActive = moreNav.some(item => pathname === item.href || pathname.startsWith(`${item.href}/`))
+
+  const { data: pendingDuels } = useQuery({
+    queryKey: ['duels-pending-count'],
+    queryFn: async () => {
+      const res = await api.get('/duels/pending-count')
+      return res.data.data.count as number
+    },
+    refetchInterval: 60000,
+    enabled: !!user,
+  })
 
   return (
     <>
@@ -61,6 +73,7 @@ export function BottomNav() {
                 {moreNav.map(item => {
                   const Icon = item.icon
                   const isActive = pathname === item.href || pathname.startsWith(`${item.href}/`)
+                  const badge = item.href === '/duels' && pendingDuels ? pendingDuels : 0
                   return (
                     <Link
                       key={item.href}
@@ -68,11 +81,18 @@ export function BottomNav() {
                       onClick={() => setMoreOpen(false)}
                       className="flex flex-col items-center gap-1.5 py-3"
                     >
-                      <div className={cn(
-                        'w-12 h-12 flex items-center justify-center rounded-2xl transition-all',
-                        isActive ? 'bg-[#00FF87]/15' : 'bg-[#1E2A45]'
-                      )}>
-                        <Icon className={cn('w-5 h-5', isActive ? 'text-[#00FF87]' : 'text-gray-400')} />
+                      <div className="relative">
+                        <div className={cn(
+                          'w-12 h-12 flex items-center justify-center rounded-2xl transition-all',
+                          isActive ? 'bg-[#00FF87]/15' : 'bg-[#1E2A45]'
+                        )}>
+                          <Icon className={cn('w-5 h-5', isActive ? 'text-[#00FF87]' : 'text-gray-400')} />
+                        </div>
+                        {badge > 0 && (
+                          <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                            {badge}
+                          </span>
+                        )}
                       </div>
                       <span className={cn('text-[10px] font-semibold text-center leading-tight', isActive ? 'text-[#00FF87]' : 'text-gray-400')}>
                         {item.label}
@@ -148,11 +168,16 @@ export function BottomNav() {
               'flex flex-col items-center gap-0.5 transition-all duration-200',
               (moreOpen || isMoreActive) ? 'scale-110' : 'scale-100'
             )}>
-              <div className={cn(
-                'w-10 h-10 flex items-center justify-center rounded-2xl transition-all duration-200',
-                (moreOpen || isMoreActive) ? 'bg-[#00FF87]/15' : 'group-active:bg-[#1E2A45]'
-              )}>
-                <Grid className={cn('w-5 h-5', (moreOpen || isMoreActive) ? 'text-[#00FF87]' : 'text-gray-500')} />
+              <div className="relative">
+                <div className={cn(
+                  'w-10 h-10 flex items-center justify-center rounded-2xl transition-all duration-200',
+                  (moreOpen || isMoreActive) ? 'bg-[#00FF87]/15' : 'group-active:bg-[#1E2A45]'
+                )}>
+                  <Grid className={cn('w-5 h-5', (moreOpen || isMoreActive) ? 'text-[#00FF87]' : 'text-gray-500')} />
+                </div>
+                {!!pendingDuels && pendingDuels > 0 && !moreOpen && (
+                  <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-red-500 rounded-full border-2 border-[#0F1629]" />
+                )}
               </div>
               <span className={cn(
                 'text-[10px] font-semibold',

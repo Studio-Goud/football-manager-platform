@@ -38,6 +38,18 @@ function formatDuel(duel: any, userId: string) {
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
+// GET /duels/pending-count — number of pending incoming challenges
+router.get('/pending-count', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const count = await prisma.duel.count({
+      where: { opponent_id: req.user!.id, status: 'PENDING' },
+    })
+    sendSuccess(res, { count })
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 // GET /duels — all my duels (incoming + outgoing)
 router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
