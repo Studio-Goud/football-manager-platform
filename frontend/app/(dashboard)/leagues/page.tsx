@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Plus, LogIn, Trophy, Copy, Check, Crown, Lock, ChevronRight } from 'lucide-react'
+import { Users, Plus, LogIn, Trophy, Copy, Check, Crown, Lock, ChevronRight, Share2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import Link from 'next/link'
@@ -74,6 +74,21 @@ function LeagueCard({ league }: { league: PrivateLeague }) {
         <span className="text-xs text-gray-500">Code:</span>
         <span className="font-black text-white tracking-widest flex-1">{league.code}</span>
         <CopyButton text={league.code} />
+        <button
+          onClick={() => {
+            const url = `${window.location.origin}/leagues?join=${league.code}`
+            if (navigator.share) {
+              navigator.share({ title: `Join ${league.name}`, text: `Doe mee met mijn Fantasy Football competitie!`, url })
+            } else {
+              navigator.clipboard.writeText(url)
+              toast.success('Link gekopieerd!')
+            }
+          }}
+          className="p-1.5 text-gray-400 hover:text-[#00FF87] transition-colors"
+          title="Deel uitnodigingslink"
+        >
+          <Share2 className="w-4 h-4" />
+        </button>
       </div>
 
       {/* Members */}
@@ -118,6 +133,17 @@ export default function LeaguesPage() {
     league_filter: null as string | null,
   })
   const [joinCode, setJoinCode] = useState('')
+
+  // Auto-fill from URL param ?join=CODE
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const params = new URLSearchParams(window.location.search)
+    const code = params.get('join')
+    if (code) {
+      setJoinCode(code.toUpperCase().slice(0, 6))
+      setModal('join')
+    }
+  }, [])
 
   const { data: leagues = [], isLoading } = useQuery({
     queryKey: ['private-leagues'],
