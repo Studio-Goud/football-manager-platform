@@ -3,8 +3,41 @@ import prisma from '../config/database'
 import { sendSuccess, sendError } from '../utils/apiResponse'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { fetchLiveMatches, fetchTodayFixtures } from '../services/footballApiService'
+import { nextTickAt } from '../services/simulationService'
 
 const router = Router()
+
+// GET /matches/next-tick — wanneer is de volgende simulatie tick
+router.get('/next-tick', (_req, res) => {
+  res.json({ success: true, data: { next_tick_at: nextTickAt.toISOString() } })
+})
+
+// GET /matches/current-gameweek
+router.get('/current-gameweek', authenticate, async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const season = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    if (!season) { sendError(res, 'Geen actief seizoen', 404); return }
+
+    const gw = await prisma.gameweek.findFirst({
+      where: { season_id: season.id, status: 'ACTIVE' },
+      orderBy: { number: 'desc' },
+    })
+    if (!gw) { sendError(res, 'Geen actieve speelronde', 404); return }
+
+    sendSuccess(res, {
+      id: gw.id,
+      number: gw.number,
+      status: gw.status,
+      start_date: gw.start_date,
+      end_date: gw.end_date,
+      deadline: gw.deadline,
+      next_tick_at: nextTickAt.toISOString(),
+      season_name: season.name,
+    })
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
 
 // GET /matches/live — live wedstrijden direct van API-Sports (gecached 60s)
 router.get('/live', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {

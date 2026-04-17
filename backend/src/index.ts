@@ -26,6 +26,7 @@ import leagueRoutes from './routes/leagues'
 
 import { fetchLiveMatches, fetchMatchEvents, mapApiEventToScoring, updatePlayerPrices } from './services/footballApiService'
 import { calculateTeamGameweekPoints, SCORING } from './services/scoringService'
+import { runSimulationTick } from './services/simulationService'
 import prisma from './config/database'
 import { ensureTestAccount } from './seed-test-account'
 import { seedDemoData } from './seed-demo'
@@ -115,6 +116,11 @@ app.use(notFound)
 app.use(errorHandler)
 
 // ─── Cron jobs ──────────────────────────��─────────────────────────���───────────
+
+// Every 2 minutes: test simulatie tick
+cron.schedule('*/2 * * * *', async () => {
+  await runSimulationTick(io)
+})
 
 // Every 60 seconds: poll live matches
 cron.schedule('* * * * *', async () => {

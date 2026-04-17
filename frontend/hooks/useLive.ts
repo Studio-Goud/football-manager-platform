@@ -58,10 +58,22 @@ export function useLive() {
       }
     })
 
+    socket.on('gameweek:tick', (...args: unknown[]) => {
+      const data = args[0] as { gameweek_number: number; ticks_remaining: number; events: Array<{ player_name: string; club: string; event_type: string; minute: number }>; next_tick_at: string }
+      window.dispatchEvent(new CustomEvent('sim-tick', { detail: data }))
+    })
+
+    socket.on('gameweek:new', (...args: unknown[]) => {
+      const data = args[0] as { gameweek_number: number }
+      window.dispatchEvent(new CustomEvent('sim-new-gw', { detail: data }))
+    })
+
     return () => {
       socket.off('match:event')
       socket.off('match:score')
       socket.off('user:points')
+      socket.off('gameweek:tick')
+      socket.off('gameweek:new')
     }
   }, [addEvent, updateMatchScore, setLivePoints])
 

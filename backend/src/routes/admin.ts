@@ -5,6 +5,7 @@ import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth'
 import { syncEredivisiePlayers } from '../services/syncPlayersService'
 import { processSeasonEndRewards, giveNewSeasonBonus } from '../services/seasonRewardService'
 import { seedDemoDataForce } from '../seed-demo'
+import { fixTeamForUser } from '../services/simulationService'
 import logger from '../config/logger'
 
 const router = Router()
@@ -130,6 +131,19 @@ router.post('/seasons', async (req: AuthRequest, res: Response): Promise<void> =
     sendSuccess(res, season, 'Seizoen aangemaakt', 201)
   } catch {
     sendError(res, 'Aanmaken mislukt', 500)
+  }
+})
+
+// POST /admin/fix-team — herstel team player IDs voor test account
+router.post('/fix-team', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const testUser = await prisma.user.findUnique({ where: { email: 'ricardo@test.nl' } })
+    if (!testUser) { sendError(res, 'Test user niet gevonden', 404); return }
+    const teamId = await fixTeamForUser(testUser.id)
+    sendSuccess(res, { team_id: teamId }, 'Team gereset met correcte speler IDs')
+  } catch (err) {
+    logger.error('Fix team mislukt', { err })
+    sendError(res, 'Fix team mislukt', 500)
   }
 })
 
