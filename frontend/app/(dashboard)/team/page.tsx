@@ -109,6 +109,11 @@ export default function TeamPage() {
     setSelectedPlayer(null)
   }
 
+  const handleSetViceCaptain = (tp: TeamPlayer) => {
+    setPlayers(prev => prev.map(p => ({ ...p, is_vice_captain: p.slot === tp.slot && !p.is_captain, is_captain: p.is_captain && p.slot !== tp.slot ? false : p.is_captain })))
+    setSelectedPlayer(null)
+  }
+
   const handleSave = () => {
     if (!team?.id) { toast.error('Geen team gevonden'); return }
     saveTeam(players)
@@ -272,7 +277,15 @@ export default function TeamPage() {
                       onClick={() => handleSetCaptain(selectedPlayer)}
                       disabled={selectedPlayer.is_captain}
                     >
-                      {selectedPlayer.is_captain ? '✓ Aanvoerder' : 'Maak aanvoerder (x2)'}
+                      {selectedPlayer.is_captain ? '✓ Aanvoerder (C)' : '👑 Maak aanvoerder (x2)'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      className="w-full"
+                      onClick={() => handleSetViceCaptain(selectedPlayer)}
+                      disabled={selectedPlayer.is_vice_captain || selectedPlayer.is_captain}
+                    >
+                      {selectedPlayer.is_vice_captain ? '✓ Vice-aanvoerder (VC)' : '🥈 Maak vice-aanvoerder (x1.5)'}
                     </Button>
                     <button
                       onClick={() => handleRemovePlayer(selectedPlayer)}
@@ -318,8 +331,12 @@ export default function TeamPage() {
                     <span className="text-[#00FF87]">{spent.toFixed(1)} cr</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-gray-500">Aanvoerder</span>
-                    <span>{players.find(p => p.is_captain)?.player_id ? 'Ingesteld' : 'Niet ingesteld'}</span>
+                    <span className="text-gray-500">Aanvoerder (C)</span>
+                    <span className={players.find(p => p.is_captain) ? 'text-[#00FF87]' : 'text-gray-600'}>{players.find(p => p.is_captain)?.player?.name ?? 'Niet ingesteld'}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Vice-aanvoerder (VC)</span>
+                    <span className={players.find(p => p.is_vice_captain) ? 'text-blue-400' : 'text-gray-600'}>{players.find(p => p.is_vice_captain)?.player?.name ?? 'Niet ingesteld'}</span>
                   </div>
                 </div>
               </div>
