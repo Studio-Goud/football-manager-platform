@@ -3,17 +3,20 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useState, useEffect } from 'react'
+import { usePathname } from 'next/navigation'
 import { PlayerEventToast } from '@/components/notifications/PlayerEventToast'
 import { useAuthStore } from '@/store/authStore'
 
 function AutoLogin() {
   const { isAuthenticated, isLoading, login } = useAuthStore()
+  const pathname = usePathname()
+  const isAuthPage = pathname === '/login' || pathname === '/register'
 
   useEffect(() => {
-    if (!isAuthenticated && !isLoading) {
+    if (!isAuthenticated && !isLoading && !isAuthPage) {
       login('ricardo@test.nl', 'ricardo@test.nl').catch(() => {})
     }
-  }, [isAuthenticated, isLoading, login])
+  }, [isAuthenticated, isLoading, login, isAuthPage])
 
   return null
 }
