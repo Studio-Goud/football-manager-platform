@@ -1,26 +1,14 @@
 'use client'
 
 import { useState } from 'react'
-import { useAuthStore } from '@/store/authStore'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
 import { LiveScoreBar } from '@/components/layout/LiveScoreBar'
-import { LoadingSpinner } from '@/components/ui/LoadingSpinner'
 import { PullToRefresh } from '@/components/ui/PullToRefresh'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated, isLoading } = useAuthStore()
   const [sidebarOpen, setSidebarOpen] = useState(false)
-
-  // Wacht op auto-login — geen redirect naar /login
-  if (isLoading || !isAuthenticated) {
-    return (
-      <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
-        <LoadingSpinner size="lg" />
-      </div>
-    )
-  }
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] flex">

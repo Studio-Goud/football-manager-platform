@@ -8,15 +8,16 @@ import { PlayerEventToast } from '@/components/notifications/PlayerEventToast'
 import { useAuthStore } from '@/store/authStore'
 
 function AutoLogin() {
-  const { isAuthenticated, isLoading, login } = useAuthStore()
+  const { isAuthenticated, login } = useAuthStore()
   const pathname = usePathname()
   const isAuthPage = pathname === '/login' || pathname === '/register'
 
   useEffect(() => {
-    if (!isAuthenticated && !isLoading && !isAuthPage) {
+    if (!isAuthenticated && !isAuthPage) {
       login('ricardo@test.nl', 'ricardo@test.nl').catch(() => {})
     }
-  }, [isAuthenticated, isLoading, login, isAuthPage])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return null
 }
