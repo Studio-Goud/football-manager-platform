@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Trophy, TrendingUp, Zap, ArrowUp, ArrowDown, Star, Users, Calendar } from 'lucide-react'
+import { Trophy, TrendingUp, Zap, ArrowUp, ArrowDown, Star, Users, Calendar, Target } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { useLive } from '@/hooks/useLive'
@@ -19,6 +19,20 @@ export default function DashboardPage() {
   const { livePoints, matches } = useLive()
   const { data: leaderboard } = useLeaderboard()
   const { team, isLoading: teamLoading } = useTeam()
+
+  interface WeeklyChallenge {
+    id: string; title: string; description: string; icon: string
+    reward_coins: number; target: number; progress: number
+    completed: boolean; claimed: boolean; claimable: boolean; week_end: string
+  }
+  const { data: challenge, refetch: refetchChallenge } = useQuery<WeeklyChallenge>({
+    queryKey: ['weekly-challenge'],
+    queryFn: async () => {
+      const res = await api.get('/challenges/weekly')
+      return res.data.data
+    },
+    staleTime: 300000,
+  })
 
   const { data: pointsHistory = [] } = useQuery<{ gameweek: number; points: number; rank: number | null }[]>({
     queryKey: ['points-history'],
@@ -137,6 +151,57 @@ export default function DashboardPage() {
           </div>
         )
       })()}
+
+      {/* Weekly Challenge */}
+      {challenge && (
+        <Card className={`p-5 border ${challenge.completed ? 'border-[#00FF87]/30 bg-[#00FF87]/3' : 'border-[#1E2A45]'}`}>
+          <div className="flex items-start gap-4">
+            <div className="text-3xl flex-shrink-0">{challenge.icon}</div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 mb-1">
+                <h2 className="font-bold text-sm">Weekelijkse Challenge</h2>
+                <span className="text-[10px] bg-[#3B82F6]/10 text-blue-400 px-2 py-0.5 rounded-full font-bold">WEEK</span>
+              </div>
+              <p className="font-black">{challenge.title}</p>
+              <p className="text-xs text-gray-400 mt-0.5">{challenge.description}</p>
+
+              {/* Progress bar */}
+              <div className="mt-3 space-y-1.5">
+                <div className="flex justify-between text-xs">
+                  <span className="text-gray-500">Voortgang</span>
+                  <span className={challenge.completed ? 'text-[#00FF87]' : 'text-gray-400'}>
+                    {challenge.progress}/{challenge.target}
+                  </span>
+                </div>
+                <div className="h-2 bg-[#1E2A45] rounded-full overflow-hidden">
+                  <motion.div
+                    className={`h-full rounded-full ${challenge.completed ? 'bg-[#00FF87]' : 'bg-blue-400'}`}
+                    initial={{ width: 0 }}
+                    animate={{ width: `${Math.min((challenge.progress / challenge.target) * 100, 100)}%` }}
+                    transition={{ duration: 0.6, ease: 'easeOut' }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="text-right flex-shrink-0">
+              <p className="text-[#00FF87] font-black">+{challenge.reward_coins}</p>
+              <p className="text-[10px] text-gray-500">coins</p>
+              {challenge.claimable && (
+                <button
+                  onClick={async () => {
+                    await api.post('/challenges/weekly/claim')
+                    refetchChallenge()
+                  }}
+                  className="mt-2 px-3 py-1.5 bg-[#00FF87] text-[#0A0E1A] rounded-lg text-xs font-black hover:bg-[#00CC6A] transition-colors"
+                >
+                  Claim!
+                </button>
+              )}
+              {challenge.claimed && <p className="text-[10px] text-[#00FF87] mt-1">✓ Geclaimd</p>}
+            </div>
+          </div>
+        </Card>
+      )}
 
       {/* Points history chart */}
       {pointsHistory.length > 1 && (
