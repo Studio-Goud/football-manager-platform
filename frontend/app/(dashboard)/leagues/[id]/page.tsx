@@ -93,6 +93,39 @@ export default function LeagueDetailPage() {
         </motion.div>
       )}
 
+      {/* Points comparison bars */}
+      {entries.length > 0 && (
+        <Card className="p-5">
+          <h2 className="font-bold mb-4">Punten vergelijking</h2>
+          <div className="space-y-2">
+            {entries.map(entry => {
+              const max = entries[0]?.total_points || 1
+              const pct = Math.max(4, (entry.total_points / max) * 100)
+              const isMe = entry.is_you || entry.user_id === user?.id
+              return (
+                <div key={entry.user_id} className="flex items-center gap-3">
+                  <span className={`text-xs w-20 truncate flex-shrink-0 ${isMe ? 'text-[#00FF87] font-bold' : 'text-gray-400'}`}>
+                    {entry.username}
+                  </span>
+                  <div className="flex-1 h-3 bg-[#1E2A45] rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${pct}%` }}
+                      transition={{ duration: 0.8, delay: 0.1 }}
+                      className="h-full rounded-full"
+                      style={{ background: isMe ? '#00FF87' : '#3B82F6' }}
+                    />
+                  </div>
+                  <span className={`text-xs w-12 text-right flex-shrink-0 font-bold ${isMe ? 'text-[#00FF87]' : 'text-gray-300'}`}>
+                    {entry.total_points}
+                  </span>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
+
       <Card className="overflow-hidden">
         <div className="p-4 border-b border-[#1E2A45] flex items-center gap-2">
           <Trophy className="w-4 h-4 text-[#FFD700]" />
