@@ -7,9 +7,11 @@ import { BottomNav } from '@/components/layout/BottomNav'
 import { LiveScoreBar } from '@/components/layout/LiveScoreBar'
 import { GameweekTimer } from '@/components/layout/GameweekTimer'
 import { PullToRefresh } from '@/components/ui/PullToRefresh'
+import { OnboardingModal, useOnboarding } from '@/components/onboarding/OnboardingModal'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const { show: showOnboarding, complete: completeOnboarding } = useOnboarding()
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] flex">
@@ -37,6 +39,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
       {/* Mobile bottom navigation */}
       <BottomNav />
+
+      {/* Onboarding */}
+      {showOnboarding && <OnboardingModal onComplete={completeOnboarding} />}
     </div>
   )
 }

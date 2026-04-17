@@ -172,6 +172,29 @@ router.post('/:id/captain', authenticate, async (req: AuthRequest, res: Response
   }
 })
 
+// PATCH /teams/my/name — update team name
+router.patch('/my/name', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  const { name } = req.body
+  if (!name || typeof name !== 'string' || name.trim().length < 2 || name.trim().length > 30) {
+    sendError(res, 'Naam moet tussen 2 en 30 tekens zijn', 400)
+    return
+  }
+
+  try {
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const team = await prisma.team.findFirst({
+      where: { user_id: req.user!.id, ...(currentSeason ? { season_id: currentSeason.id } : {}) },
+      orderBy: { created_at: 'desc' },
+    })
+    if (!team) { sendError(res, 'Geen team gevonden', 404); return }
+
+    const updated = await prisma.team.update({ where: { id: team.id }, data: { name: name.trim() } })
+    sendSuccess(res, { name: updated.name }, 'Teamnaam bijgewerkt')
+  } catch {
+    sendError(res, 'Bijwerken mislukt', 500)
+  }
+})
+
 // PATCH /teams/my/tactic — update tactic style
 router.patch('/my/tactic', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   const VALID_TACTICS: TacticStyle[] = ['BALANCED', 'HIGH_PRESS', 'LOW_BLOCK', 'TIKI_TAKA', 'COUNTER_ATTACK', 'LONG_BALL']
