@@ -101,7 +101,7 @@ export default function ProfilePage() {
                 <PlusCircle className="w-4 h-4" />
                 Coins kopen
               </button>
-              {'Notification' in window && Notification.permission !== 'granted' && (
+              {typeof window !== 'undefined' && 'Notification' in window && Notification.permission !== 'granted' && (
                 <button
                   onClick={() => requestPushPermission()}
                   className="flex items-center gap-1.5 bg-[#1E2A45] text-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-[#2A3A55] transition-colors"
