@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/Button'
 import { POWERUP_CONFIG } from '@/lib/constants'
 import { PowerupType } from '@/types'
 import { Zap, Lock } from 'lucide-react'
+import { Skeleton } from '@/components/ui/Skeleton'
 import toast from 'react-hot-toast'
 import api from '@/lib/api'
 
@@ -16,7 +17,7 @@ export default function PowerupsPage() {
   const queryClient = useQueryClient()
   const balance = user?.balance_credits ?? 0
 
-  const { data: userPowerups = [] } = useQuery({
+  const { data: userPowerups = [], isLoading: powerupsLoading } = useQuery({
     queryKey: ['powerups', 'my'],
     queryFn: async () => {
       const res = await api.get('/powerups/my')
@@ -82,7 +83,9 @@ export default function PowerupsPage() {
           Power-up Shop
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {(Object.entries(POWERUP_CONFIG) as [PowerupType, typeof POWERUP_CONFIG[PowerupType]][]).map(([type, config]) => {
+          {powerupsLoading ? (
+            [1,2,3,4,5,6].map(i => <Skeleton key={i} className="h-44 rounded-xl" />)
+          ) : (Object.entries(POWERUP_CONFIG) as [PowerupType, typeof POWERUP_CONFIG[PowerupType]][]).map(([type, config]) => {
             const owned = userPowerups.filter((p: { powerup_type: string; status: string }) => p.powerup_type?.toUpperCase() === type && p.status === 'available').length
             const canAfford = balance >= config.cost
 
@@ -132,6 +135,7 @@ export default function PowerupsPage() {
       </div>
 
       {/* My inventory */}
+
       {availablePowerups.length > 0 && (
         <Card className="p-5">
           <h2 className="font-bold mb-4">Mijn Power-ups</h2>

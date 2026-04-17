@@ -54,7 +54,7 @@ export async function runSimulationTick(io: Server): Promise<void> {
       },
       include: {
         team: { select: { id: true, user_id: true, captain_player_id: true } },
-        player: { select: { position: true } },
+        player: { select: { position: true, photo_url: true } },
       },
     })
 
@@ -69,7 +69,7 @@ export async function runSimulationTick(io: Server): Promise<void> {
       if (event.event_type === 'goal') delta = SCORING.goal[pos] ?? SCORING.goal.MID
       else if (event.event_type === 'assist') delta = SCORING.assist
       else if (event.event_type === 'yellow_card') delta = SCORING.yellow_card
-      else if (event.event_type === 'clean_sheet') delta = (SCORING as Record<string, unknown>).clean_sheet ? ((SCORING as Record<string, Record<string, number>>).clean_sheet[pos] ?? 1) : 1
+      else if (event.event_type === 'clean_sheet') delta = (SCORING.clean_sheet as Record<string, number>)[pos] ?? 1
 
       if (tp.is_captain) delta *= SCORING.captain_multiplier
 
@@ -94,10 +94,18 @@ export async function runSimulationTick(io: Server): Promise<void> {
       })
 
       if (userId) {
+        const firstEvent = events.find(e => teamPlayers.some(tp => tp.player_id === e.player.id && tp.team.user_id === userId))
+          ?? events[0]
+        const playerRecord = teamPlayers.find(tp => tp.player_id === firstEvent.player.id)
         io.to(`user:${userId}`).emit('user:points', {
           total_points: Number(tgw.points),
           delta,
-          event: events[0],
+          event: {
+            event_type: firstEvent.event_type,
+            player_name: firstEvent.player.display_name,
+            minute: firstEvent.minute,
+            photo_url: playerRecord?.player.photo_url ?? firstEvent.player.photo_url ?? null,
+          },
         })
       }
     }
@@ -190,7 +198,6 @@ export async function fixTeamForUser(userId: string): Promise<string> {
       tactic_style: 'BALANCED',
       entry_fee: 0,
       total_points: 847,
-      gameweek_points: 64,
     },
   })
 

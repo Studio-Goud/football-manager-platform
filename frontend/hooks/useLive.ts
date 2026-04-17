@@ -6,17 +6,8 @@ import { QUERY_KEYS } from '@/lib/constants'
 import api from '@/lib/api'
 import { Match, MatchEvent } from '@/types'
 import toast from 'react-hot-toast'
-
-const EVENT_EMOJI: Record<string, string> = {
-  goal: '⚽',
-  assist: '🎯',
-  yellow_card: '🟨',
-  red_card: '🟥',
-  clean_sheet: '🧤',
-  save: '🧤',
-  penalty_save: '🦸',
-  own_goal: '😬',
-}
+import React from 'react'
+import { LivePointsToast } from '@/components/ui/LivePointsToast'
 
 export function useLive() {
   const { matches, livePoints, setMatches, addEvent, updateMatchScore, setLivePoints } = useLiveStore()
@@ -49,12 +40,29 @@ export function useLive() {
     })
 
     socket.on('user:points', (...args: unknown[]) => {
-      const data = args[0] as { total_points: number; delta: number; event?: MatchEvent & { player_name?: string; event_type?: string } }
+      const data = args[0] as { total_points: number; delta: number; event?: MatchEvent & { player_name?: string; event_type?: string; photo_url?: string } }
       setLivePoints(data.total_points)
       if (data.delta > 0 && data.event) {
-        const emoji = EVENT_EMOJI[data.event.event_type ?? ''] ?? '⚽'
-        const name = data.event.player_name ?? 'Speler'
-        toast.success(`${emoji} ${name} · +${data.delta} punten (totaal: ${data.total_points})`, { duration: 5000 })
+        const ev = data.event
+        toast.custom(
+          React.createElement(LivePointsToast, {
+            playerName: ev.player_name ?? 'Speler',
+            eventType: ev.event_type ?? 'goal',
+            delta: data.delta,
+            totalPoints: data.total_points,
+            photoUrl: ev.photo_url,
+          }),
+          {
+            duration: 5000,
+            style: {
+              background: '#111827',
+              border: '1px solid #1E2A45',
+              borderRadius: '12px',
+              padding: '12px 16px',
+              color: '#fff',
+            },
+          }
+        )
       }
     })
 

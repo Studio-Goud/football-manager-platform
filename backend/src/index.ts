@@ -206,7 +206,7 @@ cron.schedule('* * * * *', async () => {
               },
               include: {
                 team: { select: { id: true, user_id: true, tactic_style: true, captain_player_id: true } },
-                player: { select: { position: true } },
+                player: { select: { position: true, photo_url: true } },
               },
             })
 
@@ -239,6 +239,7 @@ cron.schedule('* * * * *', async () => {
                   event_type: mappedEvent.event_type,
                   player_name: mappedEvent.player_name,
                   minute: mappedEvent.minute,
+                  photo_url: tp.player.photo_url ?? null,
                 },
               })
             }
