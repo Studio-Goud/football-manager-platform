@@ -152,5 +152,13 @@ export async function checkAndAwardAchievements(userId: string): Promise<string[
     if (await awardAchievement(userId, 'rich')) awarded.push('rich')
   }
 
+  // scout_master: used scout 10+ times
+  const scoutCount = await prisma.transaction.count({
+    where: { user_id: userId, type: 'scout_usage' },
+  })
+  if (scoutCount >= 10) {
+    if (await awardAchievement(userId, 'scout_master')) awarded.push('scout_master')
+  }
+
   return awarded
 }

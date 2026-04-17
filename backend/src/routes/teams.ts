@@ -260,11 +260,34 @@ router.get('/my/tactic-impact', authenticate, async (req: AuthRequest, res: Resp
 // GET /teams/my/scout — AI transfer tips
 router.get('/my/scout', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const report = await generateScoutReport(req.user!.id)
+    const userId = req.user!.id
+    const report = await generateScoutReport(userId)
     if (!report) {
       sendError(res, 'Geen team gevonden', 404)
       return
     }
+
+    // Track scout usage for scout_master achievement
+    await prisma.transaction.create({
+      data: {
+        user_id: userId,
+        type: 'scout_usage',
+        amount: 0,
+        credits_amount: 0,
+        status: 'COMPLETED',
+        description: 'Scout AI gebruikt',
+      },
+    })
+
+    // Check scout_master achievement (10 uses)
+    const { awardAchievement } = await import('../services/achievementService')
+    const scoutCount = await prisma.transaction.count({
+      where: { user_id: userId, type: 'scout_usage' },
+    })
+    if (scoutCount >= 10) {
+      await awardAchievement(userId, 'scout_master')
+    }
+
     sendSuccess(res, report)
   } catch {
     sendError(res, 'Scout analyse mislukt', 500)
