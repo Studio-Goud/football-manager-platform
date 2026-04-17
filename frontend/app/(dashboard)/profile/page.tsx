@@ -4,18 +4,23 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/store/authStore'
 import { useWallet } from '@/hooks/useWallet'
+import { useTeam } from '@/hooks/useTeam'
+import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
 import { DepositModal } from '@/components/profile/DepositModal'
 import { TransactionTable } from '@/components/profile/TransactionTable'
 import { TierProgress } from '@/components/profile/TierProgress'
-import { PlusCircle, CreditCard, BarChart2, User } from 'lucide-react'
+import { PlusCircle, CreditCard, BarChart2, User, Trophy, Zap, Users } from 'lucide-react'
+import Link from 'next/link'
 
 type Tab = 'overview' | 'transactions' | 'tier'
 
 export default function ProfilePage() {
   const { user } = useAuthStore()
   const { transactions } = useWallet()
+  const { team } = useTeam()
+  const { data: leaderboard } = useLeaderboard()
   const [tab, setTab] = useState<Tab>('overview')
   const [depositOpen, setDepositOpen] = useState(false)
 
@@ -102,20 +107,47 @@ export default function ProfilePage() {
       {/* Tab content */}
       <motion.div key={tab} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
         {tab === 'overview' && (
-          <Card className="p-5">
-            <h2 className="font-bold mb-4">Account Informatie</h2>
-            <div className="space-y-3">
-              {[
-                { label: 'Gebruikersnaam', value: currentUser.username },
-                { label: 'E-mail', value: currentUser.email },
-              ].map(({ label, value }) => (
-                <div key={label} className="flex justify-between py-2 border-b border-[#1E2A45] last:border-0">
-                  <span className="text-sm text-gray-400">{label}</span>
-                  <span className="text-sm font-medium">{value}</span>
+          <div className="space-y-4">
+            {/* Team Stats */}
+            {team && (
+              <Card className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="font-bold">{team.name}</h2>
+                  <Link href="/team" className="text-xs text-[#00FF87] hover:underline">Bewerken →</Link>
                 </div>
-              ))}
-            </div>
-          </Card>
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Totale punten', value: Number(team.total_points).toLocaleString(), icon: Trophy, color: '#FFD700' },
+                    { label: 'Huidige rang', value: (() => { const e = leaderboard?.entries?.find((e: { is_current_user?: boolean }) => e.is_current_user); return e?.rank ? `#${e.rank}` : '—' })(), icon: Users, color: '#00FF87' },
+                    { label: 'Teamwaarde', value: `${team.players.reduce((s, tp) => s + (tp.player?.price ?? 0), 0).toFixed(1)} cr`, icon: Zap, color: '#3B82F6' },
+                  ].map(({ label, value, icon: Icon, color }) => (
+                    <div key={label} className="bg-[#0A0E1A] rounded-xl p-3 text-center">
+                      <Icon className="w-4 h-4 mx-auto mb-1.5" style={{ color }} />
+                      <p className="font-black text-sm">{value}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5">{label}</p>
+                    </div>
+                  ))}
+                </div>
+              </Card>
+            )}
+
+            {/* Account info */}
+            <Card className="p-5">
+              <h2 className="font-bold mb-4">Account Informatie</h2>
+              <div className="space-y-3">
+                {[
+                  { label: 'Gebruikersnaam', value: currentUser.username },
+                  { label: 'E-mail', value: currentUser.email },
+                  { label: 'Lid sinds', value: new Date((user as unknown as { created_at?: string })?.created_at ?? Date.now()).toLocaleDateString('nl-NL', { year: 'numeric', month: 'long' }) },
+                ].map(({ label, value }) => (
+                  <div key={label} className="flex justify-between py-2 border-b border-[#1E2A45] last:border-0">
+                    <span className="text-sm text-gray-400">{label}</span>
+                    <span className="text-sm font-medium">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          </div>
         )}
 
         {tab === 'transactions' && (
