@@ -40,12 +40,27 @@ export default function PowerupsPage() {
     },
   })
 
+  const activateMutation = useMutation({
+    mutationFn: async (id: number) => {
+      const res = await api.post(`/powerups/${id}/activate`, {})
+      return res.data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['powerups'] })
+      toast.success('Power-up geactiveerd! 🚀')
+    },
+    onError: (err: unknown) => {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Activeren mislukt')
+    },
+  })
+
   const handlePurchase = (type: PowerupType) => {
     buyMutation.mutate(type.toLowerCase())
   }
 
   const availablePowerups = userPowerups.filter((p: { status: string }) => p.status === 'available')
-  const usedPowerups = userPowerups.filter((p: { status: string }) => p.status === 'used' || p.status === 'expired')
+  const usedPowerups = userPowerups.filter((p: { status: string }) => p.status === 'used' || p.status === 'expired' || p.status === 'active')
 
   return (
     <div className="space-y-6">
@@ -68,7 +83,7 @@ export default function PowerupsPage() {
         </h2>
         <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {(Object.entries(POWERUP_CONFIG) as [PowerupType, typeof POWERUP_CONFIG[PowerupType]][]).map(([type, config]) => {
-            const owned = userPowerups.filter((p: { type: string; status: string }) => p.type === type && p.status === 'available').length
+            const owned = userPowerups.filter((p: { powerup_type: string; status: string }) => p.powerup_type?.toUpperCase() === type && p.status === 'available').length
             const canAfford = balance >= config.cost
 
             return (
@@ -121,8 +136,9 @@ export default function PowerupsPage() {
         <Card className="p-5">
           <h2 className="font-bold mb-4">Mijn Power-ups</h2>
           <div className="space-y-3">
-            {availablePowerups.map((pu: { id: string; type: string; status: string }) => {
-              const config = POWERUP_CONFIG[pu.type as PowerupType] ?? { name: pu.type, description: '', icon: '⚡', color: '#00FF87' }
+            {availablePowerups.map((pu: { id: number; powerup_type: string; status: string }) => {
+              const puType = (pu.powerup_type ?? '').toUpperCase() as PowerupType
+              const config = POWERUP_CONFIG[puType] ?? { name: pu.powerup_type, description: '', icon: '⚡', color: '#00FF87' }
               return (
                 <div key={pu.id} className="flex items-center gap-4 bg-[#0A0E1A] rounded-xl p-3">
                   <div className="w-10 h-10 rounded-xl flex items-center justify-center text-xl flex-shrink-0" style={{ background: `${config.color}20` }}>
@@ -134,8 +150,12 @@ export default function PowerupsPage() {
                   </div>
                   <div className="flex items-center gap-2">
                     <span className="text-xs bg-[#00FF87]/10 text-[#00FF87] px-2 py-0.5 rounded-full">Beschikbaar</span>
-                    <button className="text-xs border border-[#00FF87]/30 text-[#00FF87] px-3 py-1 rounded-lg hover:bg-[#00FF87]/10 transition-colors">
-                      Activeren
+                    <button
+                      onClick={() => activateMutation.mutate(pu.id)}
+                      disabled={activateMutation.isPending}
+                      className="text-xs border border-[#00FF87]/30 text-[#00FF87] px-3 py-1 rounded-lg hover:bg-[#00FF87]/10 transition-colors disabled:opacity-50"
+                    >
+                      {activateMutation.isPending ? '...' : 'Activeren'}
                     </button>
                   </div>
                 </div>
