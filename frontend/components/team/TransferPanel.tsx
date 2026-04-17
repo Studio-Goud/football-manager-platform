@@ -55,7 +55,10 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100, d
       if (search) params.search = search
       if (leagueId) params.league_id = String(leagueId)
       const res = await api.get('/players', { params })
-      return res.data.data as Player[]
+      return (res.data.data as (Player & { price_change?: number })[]).map(p => ({
+        ...p,
+        price_change_week: p.price_change ?? p.price_change_week ?? 0,
+      })) as Player[]
     },
     staleTime: 30000,
   })

@@ -60,6 +60,7 @@ export interface Player {
   form_history: number[] // last 6 gameweeks
   owned_by_percent: number
   price_change_week: number
+  price_change?: number
   price_history?: Array<{ price: number; recorded_at: string }>
 }
 

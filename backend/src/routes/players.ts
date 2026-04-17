@@ -36,22 +36,27 @@ router.get('/', authenticate, async (req: Request, res: Response): Promise<void>
 
   try {
     const [players, total] = await Promise.all([
-      prisma.player.findMany({ where, orderBy, skip, take: perPageNum }),
+      prisma.player.findMany({ where, orderBy, skip, take: perPageNum, include: { price_history: { orderBy: { recorded_at: 'desc' }, take: 2 } } }),
       prisma.player.count({ where }),
     ])
 
-    sendPaginated(res, players.map(p => ({
-      id: p.id,
-      name: p.name,
-      display_name: p.display_name,
-      club: p.club,
-      position: p.position,
-      price: Number(p.price),
-      form: Number(p.form),
-      availability: p.availability.toLowerCase(),
-      photo_url: p.photo_url,
-      total_points: Number(p.total_points),
-    })), total, pageNum, perPageNum)
+    sendPaginated(res, players.map(p => {
+      const currentPrice = Number(p.price)
+      const prevPrice = p.price_history[1] ? Number(p.price_history[1].price) : currentPrice
+      return {
+        id: p.id,
+        name: p.name,
+        display_name: p.display_name,
+        club: p.club,
+        position: p.position,
+        price: currentPrice,
+        price_change: currentPrice - prevPrice,
+        form: Number(p.form),
+        availability: p.availability.toLowerCase(),
+        photo_url: p.photo_url,
+        total_points: Number(p.total_points),
+      }
+    }), total, pageNum, perPageNum)
   } catch {
     sendError(res, 'Ophalen mislukt', 500)
   }
