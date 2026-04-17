@@ -3,7 +3,8 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "env": {
-    "NEXT_PUBLIC_API_URL": "https://your-railway-app.railway.app/api"
+    "NEXT_PUBLIC_API_URL": "https://football-manager-platform-production.up.railway.app/api",
+    "NEXT_PUBLIC_WS_URL": "https://football-manager-platform-production.up.railway.app"
   },
   "headers": [
     {

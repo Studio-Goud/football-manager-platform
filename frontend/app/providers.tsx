@@ -2,10 +2,16 @@
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { PlayerEventToast } from '@/components/notifications/PlayerEventToast'
 
 export function Providers({ children }: { children: React.ReactNode }) {
+  useEffect(() => {
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/sw.js').catch(() => {})
+    }
+  }, [])
+
   const [queryClient] = useState(
     () =>
       new QueryClient({
