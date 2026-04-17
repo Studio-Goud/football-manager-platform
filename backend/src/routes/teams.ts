@@ -760,4 +760,44 @@ router.get('/my/upcoming-fixtures', authenticate, async (req: AuthRequest, res: 
   }
 })
 
+// GET /teams/my/season-stats — punten per speelronde voor het huidige seizoen
+router.get('/my/season-stats', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const team = await prisma.team.findFirst({
+      where: { user_id: req.user!.id, ...(currentSeason ? { season_id: currentSeason.id } : {}) },
+      orderBy: { created_at: 'desc' },
+    })
+    if (!team) { sendSuccess(res, { gameweeks: [], total_points: 0, avg_points: 0, best_gw: null, best_gw_points: 0 }); return }
+
+    const teamGws = await prisma.teamGameweek.findMany({
+      where: { team_id: team.id },
+      include: { gameweek: { select: { number: true } } },
+      orderBy: { gameweek_id: 'asc' },
+    })
+
+    const gameweeks = teamGws.map(tg => ({
+      gw: tg.gameweek.number,
+      name: `Speelronde ${tg.gameweek.number}`,
+      points: Number(tg.points),
+      rank: tg.rank ?? null,
+    }))
+
+    const totalPoints = gameweeks.reduce((s, g) => s + g.points, 0)
+    const avgPoints = gameweeks.length ? Math.round(totalPoints / gameweeks.length) : 0
+    const bestGwEntry = gameweeks.reduce((best, g) => g.points > (best?.points ?? -1) ? g : best, null as typeof gameweeks[0] | null)
+
+    sendSuccess(res, {
+      gameweeks,
+      total_points: totalPoints,
+      avg_points: avgPoints,
+      best_gw: bestGwEntry ? bestGwEntry.gw : null,
+      best_gw_points: bestGwEntry ? bestGwEntry.points : 0,
+      season_name: currentSeason?.name ?? 'Huidig seizoen',
+    })
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 export default router

@@ -9,15 +9,25 @@ import { useTeam } from '@/hooks/useTeam'
 import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
+import { Skeleton } from '@/components/ui/Skeleton'
 import { DepositModal } from '@/components/profile/DepositModal'
 import { TransactionTable } from '@/components/profile/TransactionTable'
 import { TierProgress } from '@/components/profile/TierProgress'
-import { PlusCircle, CreditCard, BarChart2, User, Trophy, Zap, Users, Medal, Bell, Activity } from 'lucide-react'
+import { PlusCircle, CreditCard, BarChart2, User, Trophy, Zap, Users, Medal, Bell, Activity, TrendingUp } from 'lucide-react'
 import Link from 'next/link'
 import api from '@/lib/api'
 import { requestPushPermission } from '@/hooks/usePushNotifications'
 
-type Tab = 'overview' | 'transactions' | 'tier' | 'achievements' | 'activity'
+type Tab = 'overview' | 'stats' | 'transactions' | 'tier' | 'achievements' | 'activity'
+
+interface SeasonStats {
+  gameweeks: Array<{ gw: number; name: string; points: number; rank: number | null }>
+  total_points: number
+  avg_points: number
+  best_gw: number | null
+  best_gw_points: number
+  season_name: string
+}
 
 interface Achievement {
   id: number
@@ -46,6 +56,16 @@ export default function ProfilePage() {
       return res.data.data
     },
     enabled: tab === 'achievements',
+  })
+
+  const { data: seasonStats, isLoading: statsLoading } = useQuery<SeasonStats>({
+    queryKey: ['season-stats'],
+    queryFn: async () => {
+      const res = await api.get('/teams/my/season-stats')
+      return res.data.data
+    },
+    enabled: tab === 'stats',
+    staleTime: 120000,
   })
 
   const { data: streakData } = useQuery<{ streak: number; last_claimed: string | null }>({
@@ -86,9 +106,9 @@ export default function ProfilePage() {
 
   const tabs = [
     { key: 'overview' as Tab,      label: 'Overzicht',    icon: User },
+    { key: 'stats' as Tab,         label: 'Stats',        icon: TrendingUp },
     { key: 'activity' as Tab,      label: 'Activiteit',   icon: Activity },
     { key: 'transactions' as Tab,  label: 'Transacties',  icon: CreditCard },
-    { key: 'tier' as Tab,          label: 'Tier',         icon: BarChart2 },
     { key: 'achievements' as Tab,  label: 'Badges',       icon: Medal },
   ]
 
@@ -216,6 +236,93 @@ export default function ProfilePage() {
                 ))}
               </div>
             </Card>
+          </div>
+        )}
+
+        {tab === 'stats' && (
+          <div className="space-y-4">
+            {statsLoading ? (
+              <div className="space-y-3">
+                {[1,2,3].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
+              </div>
+            ) : !seasonStats || seasonStats.gameweeks.length === 0 ? (
+              <Card className="p-8 text-center text-gray-500 text-sm">
+                <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                Nog geen speelronde data
+              </Card>
+            ) : (
+              <>
+                {/* Summary stats */}
+                <div className="grid grid-cols-3 gap-3">
+                  {[
+                    { label: 'Totaal punten', value: seasonStats.total_points, color: '#00FF87' },
+                    { label: 'Gem. per ronde', value: seasonStats.avg_points, color: '#3B82F6' },
+                    { label: `Beste ronde (GW${seasonStats.best_gw})`, value: seasonStats.best_gw_points, color: '#FFD700' },
+                  ].map(({ label, value, color }) => (
+                    <Card key={label} className="p-3 text-center">
+                      <p className="text-xl font-black" style={{ color }}>{value}</p>
+                      <p className="text-[10px] text-gray-500 mt-0.5 leading-tight">{label}</p>
+                    </Card>
+                  ))}
+                </div>
+
+                {/* Points bar chart */}
+                <Card className="p-5">
+                  <h2 className="font-bold mb-4">Punten per speelronde — {seasonStats.season_name}</h2>
+                  <div className="space-y-2">
+                    {seasonStats.gameweeks.map((gw, i) => {
+                      const max = Math.max(...seasonStats.gameweeks.map(g => g.points), 1)
+                      const pct = Math.max(2, (gw.points / max) * 100)
+                      const isBest = gw.gw === seasonStats.best_gw
+                      return (
+                        <motion.div
+                          key={gw.gw}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.03 }}
+                          className="flex items-center gap-3"
+                        >
+                          <span className="text-[11px] text-gray-500 w-12 flex-shrink-0 text-right">GW{gw.gw}</span>
+                          <div className="flex-1 h-6 bg-[#1E2A45] rounded-full overflow-hidden">
+                            <motion.div
+                              initial={{ width: 0 }}
+                              animate={{ width: `${pct}%` }}
+                              transition={{ duration: 0.6, delay: i * 0.03 }}
+                              className="h-full rounded-full flex items-center justify-end pr-2"
+                              style={{ background: isBest ? '#FFD700' : '#3B82F6' }}
+                            >
+                              {gw.points >= 8 && (
+                                <span className="text-[10px] font-black text-white">{gw.points}</span>
+                              )}
+                            </motion.div>
+                          </div>
+                          <span className={`text-xs font-bold w-8 text-right flex-shrink-0 ${isBest ? 'text-[#FFD700]' : 'text-gray-300'}`}>
+                            {gw.points}
+                          </span>
+                        </motion.div>
+                      )
+                    })}
+                  </div>
+                </Card>
+
+                {/* Rank history */}
+                {seasonStats.gameweeks.some(g => g.rank != null) && (
+                  <Card className="p-5">
+                    <h2 className="font-bold mb-4">Rang per speelronde</h2>
+                    <div className="space-y-2">
+                      {seasonStats.gameweeks.filter(g => g.rank != null).map((gw, i) => (
+                        <div key={gw.gw} className="flex items-center gap-3">
+                          <span className="text-[11px] text-gray-500 w-12 flex-shrink-0 text-right">GW{gw.gw}</span>
+                          <span className={`text-sm font-black ${gw.rank! <= 3 ? 'text-[#FFD700]' : 'text-gray-300'}`}>
+                            #{gw.rank}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </Card>
+                )}
+              </>
+            )}
           </div>
         )}
 
