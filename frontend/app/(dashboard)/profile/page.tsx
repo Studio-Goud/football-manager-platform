@@ -48,6 +48,15 @@ export default function ProfilePage() {
     enabled: tab === 'achievements',
   })
 
+  const { data: streakData } = useQuery<{ streak: number; last_claimed: string | null }>({
+    queryKey: ['login-streak'],
+    queryFn: async () => {
+      const res = await api.get('/auth/streak')
+      return res.data.data
+    },
+    staleTime: 300000,
+  })
+
   const currentUser = user ?? {
     username: 'Demo User', email: 'demo@example.nl', balance_credits: 5000,
     tier: 'gold' as const, kyc_status: 'verified' as const, role: 'user' as const,
@@ -115,10 +124,11 @@ export default function ProfilePage() {
         </div>
 
         {/* Quick stats */}
-        <div className="grid grid-cols-2 gap-3 mt-5 pt-5 border-t border-[#1E2A45]">
+        <div className="grid grid-cols-3 gap-3 mt-5 pt-5 border-t border-[#1E2A45]">
           {[
             { label: 'Seizoenen', value: (currentUser as any).seasons_played ?? 0 },
             { label: 'Beste finish', value: `#${(currentUser as any).best_finish ?? '-'}` },
+            { label: 'Streak 🔥', value: streakData?.streak ? `${streakData.streak}d` : '0d' },
           ].map(({ label, value }) => (
             <div key={label} className="text-center">
               <p className="font-black text-lg">{value}</p>

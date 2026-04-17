@@ -211,6 +211,43 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
   }
 })
 
+// GET /auth/streak — get current login streak
+router.get('/streak', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id
+  try {
+    const recentBonuses = await prisma.transaction.findMany({
+      where: { user_id: userId, type: 'daily_bonus' },
+      orderBy: { created_at: 'desc' },
+      take: 30,
+    })
+
+    if (recentBonuses.length === 0) {
+      sendSuccess(res, { streak: 0, last_claimed: null })
+      return
+    }
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    let streak = 0
+    for (let i = 0; i < recentBonuses.length; i++) {
+      const bonusDay = new Date(recentBonuses[i].created_at)
+      bonusDay.setHours(0, 0, 0, 0)
+      const expected = new Date(today)
+      expected.setDate(expected.getDate() - i)
+      if (bonusDay.getTime() === expected.getTime()) {
+        streak++
+      } else {
+        break
+      }
+    }
+
+    sendSuccess(res, { streak, last_claimed: recentBonuses[0].created_at })
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 // POST /auth/daily-bonus — claim 50 coins once per calendar day
 router.post('/daily-bonus', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   const userId = req.user!.id
