@@ -17,7 +17,10 @@ export default function LeaderboardPage() {
   const { data: leaderboard, isLoading } = useLeaderboard()
   const [viewMode, setViewMode] = useState<ViewMode>('season')
 
-  const entries = leaderboard?.entries ?? []
+  const allEntries = leaderboard?.entries ?? []
+  const entries = viewMode === 'gameweek'
+    ? [...allEntries].sort((a, b) => (b.gameweek_points ?? 0) - (a.gameweek_points ?? 0)).map((e, i) => ({ ...e, rank: i + 1 }))
+    : allEntries
   const top3 = entries.slice(0, 3)
   const rest = entries.slice(3)
   const myEntry = entries.find(e => e.is_current_user || e.user.id === user?.id)
@@ -86,7 +89,9 @@ export default function LeaderboardPage() {
           <span className="text-2xl font-black text-[#00FF87]">#{myEntry.rank}</span>
           <div className="flex-1">
             <p className="font-bold">Jouw positie</p>
-            <p className="text-sm text-gray-400">{myEntry.total_points} punten · {myEntry.gameweek_points} dit GW</p>
+            <p className="text-sm text-gray-400">
+              {viewMode === 'gameweek' ? `${myEntry.gameweek_points} punten dit GW` : `${myEntry.total_points} seizoenpunten`}
+            </p>
           </div>
           <div className="text-right">
             <p className="font-bold text-[#00FF87]">{myEntry.prize > 0 ? `+${myEntry.prize} coins` : '—'}</p>
@@ -113,7 +118,7 @@ export default function LeaderboardPage() {
             >
               <Avatar fallback={entry.user.username} size="md" />
               <p className="font-bold text-xs text-center truncate w-full px-2">{entry.user.username}</p>
-              <p className="text-xs text-gray-400">{entry.total_points} pt</p>
+              <p className="text-xs text-gray-400">{viewMode === 'gameweek' ? entry.gameweek_points : entry.total_points} pt</p>
               <div className={`w-full ${heights[podiumIdx]} rounded-t-lg flex items-start justify-center pt-2`} style={{ background: `${color}20`, border: `1px solid ${color}40` }}>
                 <span className="text-lg font-black" style={{ color }}>
                   {ranks[podiumIdx] === 1 ? <Crown className="w-6 h-6" style={{ color }} /> : `#${ranks[podiumIdx]}`}
@@ -190,8 +195,8 @@ export default function LeaderboardPage() {
 
                 {/* Points */}
                 <div className="text-right hidden sm:block">
-                  <p className="font-bold text-sm">{entry.total_points}</p>
-                  <p className="text-xs text-gray-500">+{entry.gameweek_points} GW</p>
+                  <p className="font-bold text-sm">{viewMode === 'gameweek' ? entry.gameweek_points : entry.total_points}</p>
+                  <p className="text-xs text-gray-500">{viewMode === 'gameweek' ? 'dit GW' : `+${entry.gameweek_points} GW`}</p>
                 </div>
 
                 {/* Coin reward */}
