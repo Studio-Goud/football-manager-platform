@@ -84,6 +84,42 @@ router.get('/hot', authenticate, async (_req: Request, res: Response): Promise<v
   }
 })
 
+// GET /players/best-value — beste form/prijs ratio per positie
+router.get('/best-value', authenticate, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const positions = ['GK', 'DEF', 'MID', 'FWD']
+    const result: Record<string, unknown[]> = {}
+
+    for (const pos of positions) {
+      const players = await prisma.player.findMany({
+        where: { position: pos, availability: 'AVAILABLE' },
+        orderBy: [{ form: 'desc' }, { total_points: 'desc' }],
+        take: 50,
+      })
+
+      const withValue = players.map(p => ({
+        id: p.id,
+        name: p.name,
+        display_name: p.display_name,
+        club: p.club,
+        position: p.position,
+        price: Number(p.price),
+        form: Number(p.form),
+        total_points: Number(p.total_points),
+        photo_url: p.photo_url,
+        value_score: Number(p.price) > 0 ? Number(p.form) / Number(p.price) : 0,
+      }))
+
+      withValue.sort((a, b) => b.value_score - a.value_score)
+      result[pos] = withValue.slice(0, 5)
+    }
+
+    sendSuccess(res, result)
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 // GET /players/:id — player detail
 router.get('/:id', authenticate, async (req: Request, res: Response): Promise<void> => {
   try {

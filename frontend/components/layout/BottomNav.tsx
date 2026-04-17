@@ -3,14 +3,14 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Users, ShoppingCart, Swords, User, LayoutDashboard } from 'lucide-react'
+import { Users, ShoppingCart, Telescope, User, LayoutDashboard } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 
 const bottomNavItems = [
   { label: 'Home',    href: '/dashboard',    icon: LayoutDashboard },
   { label: 'Team',    href: '/team',         icon: Users },
-  { label: 'Duels',  href: '/duels',        icon: Swords },
+  { label: 'Scout',  href: '/scout',        icon: Telescope },
   { label: 'Markt',  href: '/marketplace',  icon: ShoppingCart },
   { label: 'Profiel', href: '/profile',     icon: User },
 ]

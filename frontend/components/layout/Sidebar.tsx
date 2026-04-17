@@ -15,6 +15,7 @@ import {
   X,
   Swords,
   Globe,
+  Telescope,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
@@ -33,6 +34,7 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Mijn Team', href: '/team', icon: Users },
+  { label: 'Scout', href: '/scout', icon: Telescope },
   { label: 'Transfermarkt', href: '/marketplace', icon: ShoppingCart },
   { label: 'Live Wedstrijden', href: '/live', icon: Radio },
   { label: 'Ranglijst', href: '/leaderboard', icon: Trophy },
