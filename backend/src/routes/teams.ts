@@ -304,4 +304,34 @@ router.get('/leaderboard', authenticate, async (req: AuthRequest, res: Response)
   }
 })
 
+// GET /teams/my/points-history — last 10 gameweek scores
+router.get('/my/points-history', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const team = await prisma.team.findFirst({
+      where: { user_id: req.user!.id, ...(currentSeason ? { season_id: currentSeason.id } : {}) },
+      orderBy: { created_at: 'desc' },
+    })
+    if (!team) {
+      sendSuccess(res, [])
+      return
+    }
+
+    const history = await prisma.teamGameweek.findMany({
+      where: { team_id: team.id },
+      include: { gameweek: { select: { number: true } } },
+      orderBy: { gameweek_id: 'asc' },
+      take: 10,
+    })
+
+    sendSuccess(res, history.map(h => ({
+      gameweek: h.gameweek.number,
+      points: Number(h.points),
+      rank: h.rank,
+    })))
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 export default router

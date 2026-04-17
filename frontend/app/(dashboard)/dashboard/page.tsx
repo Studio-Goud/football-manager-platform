@@ -12,12 +12,22 @@ import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import api from '@/lib/api'
 import Link from 'next/link'
+import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts'
 
 export default function DashboardPage() {
   const { user } = useAuthStore()
   const { livePoints, matches } = useLive()
   const { data: leaderboard } = useLeaderboard()
   const { team, isLoading: teamLoading } = useTeam()
+
+  const { data: pointsHistory = [] } = useQuery<{ gameweek: number; points: number; rank: number | null }[]>({
+    queryKey: ['points-history'],
+    queryFn: async () => {
+      const res = await api.get('/teams/my/points-history')
+      return res.data.data
+    },
+    staleTime: 300000,
+  })
 
   const { data: todayFixtures = [] } = useQuery({
     queryKey: ['today-fixtures'],
@@ -106,6 +116,37 @@ export default function DashboardPage() {
           </motion.div>
         ))}
       </div>
+
+      {/* Points history chart */}
+      {pointsHistory.length > 1 && (
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-[#00FF87]" />
+              Punten per speelronde
+            </h2>
+            <span className="text-xs text-gray-500">Laatste {pointsHistory.length} rondes</span>
+          </div>
+          <ResponsiveContainer width="100%" height={100}>
+            <AreaChart data={pointsHistory} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+              <defs>
+                <linearGradient id="pointsGradient" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="#00FF87" stopOpacity={0.3} />
+                  <stop offset="95%" stopColor="#00FF87" stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <XAxis dataKey="gameweek" tick={{ fontSize: 10, fill: '#6B7280' }} tickFormatter={v => `GW${v}`} />
+              <YAxis tick={{ fontSize: 10, fill: '#6B7280' }} />
+              <Tooltip
+                contentStyle={{ background: '#0F1629', border: '1px solid #1E2A45', borderRadius: '8px', fontSize: '12px' }}
+                formatter={(v: number) => [`${v} pt`, 'Punten']}
+                labelFormatter={l => `Speelronde ${l}`}
+              />
+              <Area type="monotone" dataKey="points" stroke="#00FF87" strokeWidth={2} fill="url(#pointsGradient)" dot={{ fill: '#00FF87', r: 3 }} />
+            </AreaChart>
+          </ResponsiveContainer>
+        </Card>
+      )}
 
       <div className="grid lg:grid-cols-3 gap-6">
         {/* My team preview */}
