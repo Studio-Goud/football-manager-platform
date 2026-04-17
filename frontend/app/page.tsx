@@ -92,10 +92,10 @@ export default function LandingPage() {
               Inloggen
             </Link>
             <Link
-              href="/register"
+              href="/dashboard"
               className="bg-[#00FF87] text-[#0A0E1A] px-4 py-2 rounded-lg text-sm font-semibold hover:bg-[#00CC6A] transition-colors"
             >
-              Gratis starten
+              Direct spelen →
             </Link>
           </div>
         </div>
@@ -133,10 +133,10 @@ export default function LandingPage() {
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link
-                href="/register"
+                href="/dashboard"
                 className="flex items-center justify-center gap-2 bg-[#00FF87] text-[#0A0E1A] px-8 py-4 rounded-xl text-lg font-bold hover:bg-[#00CC6A] transition-all hover:scale-105 shadow-lg shadow-[#00FF87]/20"
               >
-                Gratis starten
+                Direct spelen
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link
