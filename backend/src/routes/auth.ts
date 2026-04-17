@@ -211,4 +211,48 @@ router.post('/refresh', async (req: Request, res: Response): Promise<void> => {
   }
 })
 
+// POST /auth/daily-bonus — claim 50 coins once per calendar day
+router.post('/daily-bonus', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  const userId = req.user!.id
+  try {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+
+    const alreadyClaimed = await prisma.transaction.findFirst({
+      where: {
+        user_id: userId,
+        type: 'daily_bonus',
+        created_at: { gte: today },
+      },
+    })
+
+    if (alreadyClaimed) {
+      sendSuccess(res, { claimed: false, message: 'Al geclaimd vandaag' })
+      return
+    }
+
+    const bonus = 50
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: userId },
+        data: { balance_credits: { increment: bonus } },
+      }),
+      prisma.transaction.create({
+        data: {
+          user_id: userId,
+          type: 'daily_bonus',
+          amount: 0,
+          credits_amount: bonus,
+          status: 'COMPLETED',
+          description: 'Dagelijkse inlogbonus',
+        },
+      }),
+    ])
+
+    sendSuccess(res, { claimed: true, bonus, message: `Je hebt ${bonus} coins ontvangen!` })
+  } catch {
+    sendError(res, 'Bonus claimen mislukt', 500)
+  }
+})
+
 export default router

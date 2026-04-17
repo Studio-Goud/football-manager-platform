@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
@@ -9,11 +9,26 @@ import { GameweekTimer } from '@/components/layout/GameweekTimer'
 import { PullToRefresh } from '@/components/ui/PullToRefresh'
 import { OnboardingModal, useOnboarding } from '@/components/onboarding/OnboardingModal'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
+import { useAuthStore } from '@/store/authStore'
+import api from '@/lib/api'
+import toast from 'react-hot-toast'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { show: showOnboarding, complete: completeOnboarding } = useOnboarding()
+  const { isAuthenticated, refreshUser } = useAuthStore()
   usePushNotifications()
+
+  useEffect(() => {
+    if (!isAuthenticated) return
+    api.post('/auth/daily-bonus').then(res => {
+      const data = res.data?.data
+      if (data?.claimed) {
+        toast.success(`🎁 Dagelijkse bonus: +${data.bonus} coins!`, { duration: 4000, icon: '🪙' })
+        refreshUser?.()
+      }
+    }).catch(() => {})
+  }, [isAuthenticated])
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] flex">
