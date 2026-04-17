@@ -22,6 +22,8 @@ import { useAuthStore } from '@/store/authStore'
 import { TierBadge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/ui/Avatar'
 import { formatCredits } from '@/lib/utils'
+import { useQuery } from '@tanstack/react-query'
+import api from '@/lib/api'
 
 interface NavItem {
   label: string
@@ -52,7 +54,17 @@ interface SidebarProps {
 
 export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
   const pathname = usePathname()
-  const { user } = useAuthStore()
+  const { user, isAuthenticated } = useAuthStore()
+
+  const { data: gameweek } = useQuery({
+    queryKey: ['sidebar-gameweek'],
+    queryFn: async () => {
+      const res = await api.get('/matches/current-gameweek')
+      return res.data.data as { number: number; deadline: string; season_name?: string }
+    },
+    enabled: isAuthenticated,
+    staleTime: 300000,
+  })
 
   const filteredNavItems = navItems.filter(
     (item) => !item.adminOnly || user?.role === 'admin'
@@ -165,9 +177,20 @@ export function Sidebar({ isOpen = false, onClose = () => {} }: SidebarProps) {
         {/* Bottom info */}
         <div className="p-4 border-t border-[#1E2A45]">
           <div className="bg-[#162040] rounded-xl p-3 text-xs text-gray-500">
-            <p className="font-medium text-gray-400 mb-1">Seizoen 38</p>
-            <p>Speelronde 38 van 38</p>
-            <p className="text-[#00FF87] mt-1">Deadline: vr 18:00</p>
+            {gameweek ? (
+              <>
+                <p className="font-medium text-gray-400 mb-1">{gameweek.season_name ?? 'Seizoen'}</p>
+                <p>Speelronde {gameweek.number}</p>
+                <p className={`mt-1 ${new Date(gameweek.deadline) < new Date() ? 'text-orange-400' : 'text-[#00FF87]'}`}>
+                  Deadline: {new Date(gameweek.deadline).toLocaleString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium text-gray-400 mb-1">Geen actief seizoen</p>
+                <p className="text-gray-600">Wacht op data...</p>
+              </>
+            )}
           </div>
         </div>
       </aside>
