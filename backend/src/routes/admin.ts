@@ -6,6 +6,7 @@ import { syncEredivisiePlayers } from '../services/syncPlayersService'
 import { processSeasonEndRewards, giveNewSeasonBonus } from '../services/seasonRewardService'
 import { seedDemoDataForce } from '../seed-demo'
 import { fixTeamForUser } from '../services/simulationService'
+import { seedAchievements } from '../services/achievementService'
 import logger from '../config/logger'
 
 const router = Router()
@@ -230,6 +231,16 @@ router.get('/seasons', async (_req: AuthRequest, res: Response): Promise<void> =
     })))
   } catch {
     sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// POST /admin/seed-achievements
+router.post('/seed-achievements', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const count = await seedAchievements()
+    sendSuccess(res, { count }, `${count} achievements aangemaakt/bijgewerkt`)
+  } catch {
+    sendError(res, 'Seed mislukt', 500)
   }
 })
 

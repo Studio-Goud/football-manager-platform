@@ -92,6 +92,11 @@ export default function AdminPage() {
     }
   })
 
+  const seedAchievements = () => doAction('Achievements zaai', async () => {
+    const res = await api.post('/admin/seed-achievements')
+    toast.success(`✅ ${res.data?.data?.count ?? 0} achievements aangemaakt`, { duration: 4000 })
+  })
+
   const createSeason = () => doAction('Seizoen aanmaken', () =>
     api.post('/admin/seasons', { name: `Seizoen ${new Date().getFullYear()}` })
   )
@@ -194,6 +199,10 @@ export default function AdminPage() {
               <Button onClick={giveNewSeasonBonus} loading={actionLoading === 'Startbonus uitdelen'} className="w-full" variant="secondary">
                 <Zap className="w-4 h-4 mr-2" />
                 Startbonus uitdelen (1000 coins)
+              </Button>
+              <Button onClick={seedAchievements} loading={actionLoading === 'Achievements zaai'} className="w-full" variant="secondary">
+                <Trophy className="w-4 h-4 mr-2" />
+                Achievements zaai (badges)
               </Button>
             </div>
           </Card>
