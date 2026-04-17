@@ -51,6 +51,7 @@ export function PlayerCard({ player, isSelected, isCaptain, isViceCaptain, onCli
           <div className="flex items-center gap-1">
             <span className="font-semibold text-sm truncate">{player.name}</span>
             {availabilityIcon(player.availability)}
+            {player.form >= 8 && <span className="text-[9px] font-black bg-orange-500/20 text-orange-400 px-1 rounded">🔥</span>}
           </div>
           <span className="text-xs text-gray-500">{player.club} · {player.position}</span>
         </div>
@@ -73,6 +74,13 @@ export function PlayerCard({ player, isSelected, isCaptain, isViceCaptain, onCli
       {(isCaptain || isViceCaptain) && (
         <span className={`absolute top-2 right-2 w-6 h-6 rounded-full flex items-center justify-center text-xs font-black ${isCaptain ? 'bg-[#FFD700] text-[#0A0E1A]' : 'bg-gray-600 text-white'}`}>
           {isCaptain ? 'C' : 'V'}
+        </span>
+      )}
+
+      {/* Hot form badge */}
+      {player.form >= 8 && !isCaptain && !isViceCaptain && (
+        <span className="absolute top-2 right-2 text-[10px] font-black bg-orange-500/20 text-orange-400 px-1.5 py-0.5 rounded-full border border-orange-500/30">
+          🔥 Hot
         </span>
       )}
 
