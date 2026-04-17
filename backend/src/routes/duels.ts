@@ -5,6 +5,7 @@ import { sendSuccess, sendError } from '../utils/apiResponse'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { calculatePlayerPoints, TACTIC_MULTIPLIERS, TacticStyle } from '../services/scoringService'
 import { io } from '../index'
+import { notifyDuelChallenge } from '../services/notificationService'
 
 const router = Router()
 
@@ -171,13 +172,14 @@ router.post(
         },
       })
 
-      // Notify opponent via socket
+      // Notify opponent via socket + persisted notification
       io.to(`user:${opponent.id}`).emit('user:challenge', {
         duel_id: duel.id,
         challenger_username: duel.challenger.username,
         stake,
         message: message ?? null,
       })
+      notifyDuelChallenge(opponent.id, duel.challenger.username, stake)
 
       sendSuccess(res, formatDuel(duel, req.user!.id), 'Uitdaging verstuurd!', 201)
     } catch {

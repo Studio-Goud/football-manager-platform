@@ -40,6 +40,7 @@ model User {
   private_league_memberships PrivateLeagueMember[]
   league_messages            LeagueMessage[]
   sponsors                   UserSponsor[]
+  notifications              Notification[]
 
   @@map("users")
 }
@@ -419,6 +420,20 @@ model LeagueMessage {
   user           User          @relation(fields: [user_id], references: [id])
 
   @@map("league_messages")
+}
+
+model Notification {
+  id         Int      @id @default(autoincrement())
+  user_id    String
+  type       String
+  title      String
+  body       String
+  read       Boolean  @default(false)
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }
 
 model Sponsor {

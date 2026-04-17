@@ -26,6 +26,7 @@ import leagueRoutes from './routes/leagues'
 import achievementRoutes from './routes/achievements'
 import challengeRoutes from './routes/challenges'
 import sponsorRoutes from './routes/sponsors'
+import notificationRoutes from './routes/notifications'
 
 import { fetchLiveMatches, fetchMatchEvents, mapApiEventToScoring, updatePlayerPrices } from './services/footballApiService'
 import { calculateTeamGameweekPoints, SCORING } from './services/scoringService'
@@ -113,6 +114,7 @@ app.use('/api/leagues', leagueRoutes)
 app.use('/api/achievements', achievementRoutes)
 app.use('/api/challenges', challengeRoutes)
 app.use('/api/sponsors', sponsorRoutes)
+app.use('/api/notifications', notificationRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
