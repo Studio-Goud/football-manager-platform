@@ -185,4 +185,47 @@ router.get('/ownership', authenticate, async (_req: Request, res: Response): Pro
   }
 })
 
+// GET /players/top-scorers — top 10 scorers in the latest gameweek (by MatchPerformance)
+router.get('/top-scorers', authenticate, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    // Get the most recent finished match to determine "this gameweek"
+    const recentMatch = await prisma.match.findFirst({
+      where: { status: 'FT' },
+      orderBy: { kickoff: 'desc' },
+    })
+
+    if (!recentMatch) { sendSuccess(res, []); return }
+
+    // Find top performers from recent matches (last 7 days)
+    const since = new Date(recentMatch.kickoff)
+    since.setDate(since.getDate() - 7)
+
+    const perfs = await prisma.matchPerformance.findMany({
+      where: {
+        match: { status: 'FT', kickoff: { gte: since } },
+        goals: { gt: 0 },
+      },
+      include: {
+        player: { select: { id: true, name: true, club: true, position: true, photo_url: true } },
+        match: { select: { home_team: true, away_team: true } },
+      },
+      orderBy: { goals: 'desc' },
+      take: 10,
+    })
+
+    sendSuccess(res, perfs.map(p => ({
+      player_id: p.player_id,
+      player_name: p.player.name,
+      club: p.player.club,
+      position: p.player.position,
+      photo_url: p.player.photo_url,
+      goals: p.goals,
+      assists: p.assists,
+      match: `${p.match.home_team} vs ${p.match.away_team}`,
+    })))
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 export default router

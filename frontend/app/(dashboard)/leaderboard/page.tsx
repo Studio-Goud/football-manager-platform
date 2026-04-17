@@ -10,8 +10,9 @@ import { Avatar } from '@/components/ui/Avatar'
 import { Badge, TierBadge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { QUERY_KEYS } from '@/lib/constants'
+import api from '@/lib/api'
 
 type ViewMode = 'season' | 'gameweek'
 
@@ -32,6 +33,25 @@ export default function LeaderboardPage() {
     window.addEventListener('sim-tick', handleTick)
     return () => window.removeEventListener('sim-tick', handleTick)
   }, [qc])
+
+  interface TopScorer {
+    player_id: number
+    player_name: string
+    club: string
+    position: string
+    photo_url: string | null
+    goals: number
+    assists: number
+    match: string
+  }
+  const { data: topScorers = [] } = useQuery<TopScorer[]>({
+    queryKey: ['top-scorers'],
+    queryFn: async () => {
+      const res = await api.get('/players/top-scorers')
+      return res.data.data
+    },
+    staleTime: 300000,
+  })
 
   const allEntries = leaderboard?.entries ?? []
   const entries = viewMode === 'gameweek'
@@ -102,6 +122,36 @@ export default function LeaderboardPage() {
           ))}
         </div>
       </Card>
+
+      {/* Top scorers this GW */}
+      {topScorers.length > 0 && (
+        <Card className="p-4">
+          <h2 className="font-bold mb-3 text-sm flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-[#FFD700]" /> Top Scorers
+          </h2>
+          <div className="space-y-2">
+            {topScorers.slice(0, 5).map((s, i) => (
+              <div key={s.player_id} className="flex items-center gap-3">
+                <span className="text-xs font-black text-gray-500 w-4">{i + 1}</span>
+                <div className="w-7 h-7 rounded-full bg-[#1E2A45] overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  {s.photo_url
+                    ? <img src={s.photo_url} alt={s.player_name} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                    : <span className="text-[9px] font-bold text-gray-400">{s.position}</span>
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold truncate">{s.player_name}</p>
+                  <p className="text-[10px] text-gray-500 truncate">{s.club}</p>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {s.goals > 0 && <span className="text-xs font-black">⚽ {s.goals}</span>}
+                  {s.assists > 0 && <span className="text-xs text-gray-400">🎯 {s.assists}</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* My position */}
       {myEntry && (
