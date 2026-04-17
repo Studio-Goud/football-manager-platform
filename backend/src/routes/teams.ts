@@ -396,6 +396,53 @@ router.get('/my/points-history', authenticate, async (req: AuthRequest, res: Res
   }
 })
 
+// GET /teams/user/:userId — public view of another user's team
+router.get('/user/:userId', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const { userId } = req.params
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const team = await prisma.team.findFirst({
+      where: { user_id: userId, ...(currentSeason ? { season_id: currentSeason.id } : {}) },
+      include: {
+        players: { include: { player: true } },
+        gameweeks: { orderBy: { gameweek_id: 'desc' }, take: 1 },
+      },
+      orderBy: { created_at: 'desc' },
+    })
+
+    if (!team) { sendError(res, 'Team niet gevonden', 404); return }
+
+    const tacticStyle = team.tactic_style as TacticStyle
+    sendSuccess(res, {
+      id: team.id,
+      name: team.name,
+      formation: team.formation,
+      tactic_style: tacticStyle,
+      total_points: Number(team.total_points),
+      gameweek_points: team.gameweeks[0] ? Number(team.gameweeks[0].points) : 0,
+      players: team.players.map(tp => ({
+        player_id: tp.player_id.toString(),
+        slot: tp.slot_position,
+        is_captain: tp.is_captain,
+        is_vice_captain: tp.is_vice_captain,
+        purchase_price: Number(tp.purchase_price),
+        player: tp.player ? {
+          id: tp.player.id,
+          name: tp.player.name,
+          club: tp.player.club,
+          position: tp.player.position,
+          price: Number(tp.player.price),
+          form: Number(tp.player.form),
+          photo_url: tp.player.photo_url,
+          total_points: Number(tp.player.total_points),
+        } : null,
+      })),
+    })
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 // PUT /teams/:id — save team lineup (add/remove players, log transfers)
 router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {

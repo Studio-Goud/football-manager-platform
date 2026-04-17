@@ -2,9 +2,10 @@
 
 import { useParams } from 'next/navigation'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { motion } from 'framer-motion'
-import { ArrowLeft, Crown, Trophy, LogOut } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowLeft, Crown, Trophy, LogOut, Users, X } from 'lucide-react'
 import Link from 'next/link'
+import { useState } from 'react'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
 import { Skeleton } from '@/components/ui/Skeleton'
@@ -13,6 +14,81 @@ import { useAuthStore } from '@/store/authStore'
 import toast from 'react-hot-toast'
 import api from '@/lib/api'
 import { UserTier } from '@/types'
+
+interface OpponentTeamPlayer {
+  player_id: string
+  slot: string
+  is_captain: boolean
+  player: { name: string; club: string; position: string; photo_url: string | null; total_points: number } | null
+}
+
+function TeamViewModal({ userId, username, onClose }: { userId: string; username: string; onClose: () => void }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['user-team', userId],
+    queryFn: async () => {
+      const res = await api.get(`/teams/user/${userId}`)
+      return res.data.data as { name: string; formation: string; total_points: number; players: OpponentTeamPlayer[] }
+    },
+  })
+
+  const starters = data?.players.filter(p => !p.slot.startsWith('BENCH')) ?? []
+  const byPosition = { GK: [] as OpponentTeamPlayer[], DEF: [] as OpponentTeamPlayer[], MID: [] as OpponentTeamPlayer[], FWD: [] as OpponentTeamPlayer[] }
+  for (const p of starters) {
+    const pos = p.player?.position as 'GK' | 'DEF' | 'MID' | 'FWD'
+    if (pos && byPosition[pos]) byPosition[pos].push(p)
+  }
+
+  return (
+    <>
+      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50" onClick={onClose} />
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="fixed inset-x-4 top-1/2 -translate-y-1/2 max-w-md mx-auto bg-[#0F1629] border border-[#1E2A45] rounded-2xl p-5 z-50 max-h-[85vh] overflow-y-auto"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-black text-lg">{data?.name ?? username}</h2>
+            <p className="text-xs text-gray-400">{data?.formation} · {data?.total_points} punten</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-[#1E2A45]"><X className="w-4 h-4" /></button>
+        </div>
+
+        {isLoading ? (
+          <div className="space-y-2">{[1,2,3,4,5].map(i => <Skeleton key={i} className="h-10 rounded-lg" />)}</div>
+        ) : (
+          <div className="space-y-3">
+            {(['GK', 'DEF', 'MID', 'FWD'] as const).map(pos => (
+              byPosition[pos].length > 0 && (
+                <div key={pos}>
+                  <p className="text-[10px] font-black text-gray-500 uppercase tracking-wider mb-1.5">{pos}</p>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {byPosition[pos].map(tp => (
+                      <div key={tp.player_id} className="flex items-center gap-2 bg-[#0A0E1A] rounded-lg px-2.5 py-2">
+                        <div className="w-6 h-6 rounded-full bg-[#1E2A45] overflow-hidden flex-shrink-0 flex items-center justify-center">
+                          {tp.player?.photo_url
+                            ? <img src={tp.player.photo_url} alt="" className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                            : <span className="text-[9px] font-bold text-gray-400">{pos[0]}</span>
+                          }
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-bold truncate">{tp.player?.name?.split(' ').pop()}</p>
+                          <p className="text-[9px] text-gray-500">{tp.player?.club}</p>
+                        </div>
+                        {tp.is_captain && <span className="text-[9px] bg-[#FFD700] text-black font-black px-1 rounded">C</span>}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )
+            ))}
+          </div>
+        )}
+      </motion.div>
+    </>
+  )
+}
 
 interface LeaderboardEntry {
   rank: number
@@ -37,6 +113,8 @@ export default function LeagueDetailPage() {
     },
     enabled: !!id,
   })
+
+  const [viewTeam, setViewTeam] = useState<{ userId: string; username: string } | null>(null)
 
   const leaveMutation = useMutation({
     mutationFn: () => api.delete(`/leagues/${id}/leave`),
@@ -186,12 +264,29 @@ export default function LeagueDetailPage() {
                     <p className="font-bold text-sm">{entry.total_points}</p>
                     <p className="text-xs text-gray-500">punten</p>
                   </div>
+                  <button
+                    onClick={() => setViewTeam({ userId: entry.user_id, username: entry.username })}
+                    className="p-1.5 rounded-lg hover:bg-[#1E2A45] transition-colors flex-shrink-0"
+                    title="Bekijk team"
+                  >
+                    <Users className="w-3.5 h-3.5 text-gray-500" />
+                  </button>
                 </motion.div>
               )
             })}
           </div>
         )}
       </Card>
+
+      <AnimatePresence>
+        {viewTeam && (
+          <TeamViewModal
+            userId={viewTeam.userId}
+            username={viewTeam.username}
+            onClose={() => setViewTeam(null)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   )
 }
