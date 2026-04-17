@@ -7,7 +7,7 @@ const router = Router()
 
 // GET /players — all players with filters
 router.get('/', authenticate, async (req: Request, res: Response): Promise<void> => {
-  const { position, club, search, min_price, max_price, page = '1', per_page = '20', sort = 'form' } = req.query
+  const { position, club, search, min_price, max_price, page = '1', per_page = '20', sort = 'form', league_id } = req.query
 
   const pageNum = Math.max(1, parseInt(page as string))
   const perPageNum = Math.min(50, parseInt(per_page as string))
@@ -16,6 +16,7 @@ router.get('/', authenticate, async (req: Request, res: Response): Promise<void>
   const where: Record<string, unknown> = {}
   if (position) where.position = (position as string).toUpperCase()
   if (club) where.club = { contains: club as string, mode: 'insensitive' }
+  if (league_id) where.league_id = parseInt(league_id as string)
   if (search) {
     where.OR = [
       { name: { contains: search as string, mode: 'insensitive' } },
@@ -51,6 +52,20 @@ router.get('/', authenticate, async (req: Request, res: Response): Promise<void>
       photo_url: p.photo_url,
       total_points: Number(p.total_points),
     })), total, pageNum, perPageNum)
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// GET /players/leagues — available leagues for filtering
+router.get('/leagues', authenticate, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const leagues = await prisma.league.findMany({
+      where: { is_active: true },
+      orderBy: { name: 'asc' },
+      select: { id: true, name: true, country: true, logo_url: true },
+    })
+    sendSuccess(res, leagues)
   } catch {
     sendError(res, 'Ophalen mislukt', 500)
   }

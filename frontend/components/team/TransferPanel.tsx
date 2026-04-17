@@ -28,10 +28,20 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
   const [position, setPosition] = useState<PlayerPosition | 'ALL'>('ALL')
   const [maxPrice, setMaxPrice] = useState(20)
   const [sortBy, setSortBy] = useState<'price' | 'form' | 'points'>('form')
+  const [leagueId, setLeagueId] = useState<number | null>(null)
   const [detailPlayer, setDetailPlayer] = useState<Player | null>(null)
 
+  const { data: leagues } = useQuery({
+    queryKey: ['player-leagues'],
+    queryFn: async () => {
+      const res = await api.get('/players/leagues')
+      return res.data.data as { id: number; name: string; country: string }[]
+    },
+    staleTime: 300000,
+  })
+
   const { data, isLoading } = useQuery({
-    queryKey: ['players', position, maxPrice, sortBy, search],
+    queryKey: ['players', position, maxPrice, sortBy, search, leagueId],
     queryFn: async () => {
       const params: Record<string, string> = {
         per_page: '50',
@@ -40,6 +50,7 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
       }
       if (position !== 'ALL') params.position = position
       if (search) params.search = search
+      if (leagueId) params.league_id = String(leagueId)
       const res = await api.get('/players', { params })
       return res.data.data as Player[]
     },
@@ -83,6 +94,31 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
           </button>
         ))}
       </div>
+
+      {/* League filter */}
+      {leagues && leagues.length > 1 && (
+        <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+          <button
+            onClick={() => setLeagueId(null)}
+            className={`px-3 py-1 rounded-lg text-xs font-semibold flex-shrink-0 transition-colors ${
+              leagueId === null ? 'bg-[#00FF87] text-[#0A0E1A]' : 'bg-[#1E2A45] text-gray-400 hover:bg-[#2D3A55]'
+            }`}
+          >
+            Alle liga&apos;s
+          </button>
+          {leagues.map(lg => (
+            <button
+              key={lg.id}
+              onClick={() => setLeagueId(lg.id)}
+              className={`px-3 py-1 rounded-lg text-xs font-semibold flex-shrink-0 transition-colors ${
+                leagueId === lg.id ? 'bg-[#00FF87] text-[#0A0E1A]' : 'bg-[#1E2A45] text-gray-400 hover:bg-[#2D3A55]'
+              }`}
+            >
+              {lg.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Sort + price filter */}
       <div className="flex items-center gap-3 mb-3">
