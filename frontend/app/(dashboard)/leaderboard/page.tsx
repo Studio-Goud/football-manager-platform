@@ -1,14 +1,16 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Trophy, ArrowUp, ArrowDown, Minus, Crown, Coins } from 'lucide-react'
+import { Trophy, ArrowUp, ArrowDown, Minus, Crown, Coins, RefreshCw } from 'lucide-react'
 import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { useAuthStore } from '@/store/authStore'
 import { Card } from '@/components/ui/Card'
 import { Avatar } from '@/components/ui/Avatar'
 import { Badge, TierBadge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import { useQueryClient } from '@tanstack/react-query'
+import { QUERY_KEYS } from '@/lib/constants'
 
 type ViewMode = 'season' | 'gameweek'
 
@@ -16,6 +18,19 @@ export default function LeaderboardPage() {
   const { user } = useAuthStore()
   const { data: leaderboard, isLoading } = useLeaderboard()
   const [viewMode, setViewMode] = useState<ViewMode>('season')
+  const [liveRefreshed, setLiveRefreshed] = useState(false)
+  const qc = useQueryClient()
+
+  // Auto-refresh on gameweek tick events (fired from simulationService)
+  useEffect(() => {
+    const handleTick = () => {
+      qc.invalidateQueries({ queryKey: QUERY_KEYS.leaderboard('current') })
+      setLiveRefreshed(true)
+      setTimeout(() => setLiveRefreshed(false), 3000)
+    }
+    window.addEventListener('sim-tick', handleTick)
+    return () => window.removeEventListener('sim-tick', handleTick)
+  }, [qc])
 
   const allEntries = leaderboard?.entries ?? []
   const entries = viewMode === 'gameweek'
@@ -37,7 +52,15 @@ export default function LeaderboardPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-black">Ranglijst</h1>
+          <h1 className="text-2xl font-black flex items-center gap-2">
+            Ranglijst
+            {liveRefreshed && (
+              <motion.span initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="text-xs text-[#00FF87] font-normal flex items-center gap-1">
+                <RefreshCw className="w-3 h-3 animate-spin" />
+                Live bijgewerkt
+              </motion.span>
+            )}
+          </h1>
           <p className="text-gray-400 text-sm mt-1">
             {leaderboard?.total_participants ?? 1247} deelnemers · Top 20% wint coins
           </p>
