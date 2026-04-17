@@ -1,7 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import { useAuthStore } from '@/store/authStore'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
@@ -12,24 +11,16 @@ import { PullToRefresh } from '@/components/ui/PullToRefresh'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuthStore()
-  const router = useRouter()
   const [sidebarOpen, setSidebarOpen] = useState(false)
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.push('/login')
-    }
-  }, [isAuthenticated, isLoading, router])
-
-  if (isLoading) {
+  // Wacht op auto-login — geen redirect naar /login
+  if (isLoading || !isAuthenticated) {
     return (
       <div className="min-h-screen bg-[#0A0E1A] flex items-center justify-center">
         <LoadingSpinner size="lg" />
       </div>
     )
   }
-
-  if (!isAuthenticated) return null
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] flex">

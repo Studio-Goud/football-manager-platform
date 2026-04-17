@@ -4,6 +4,19 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'react-hot-toast'
 import { useState, useEffect } from 'react'
 import { PlayerEventToast } from '@/components/notifications/PlayerEventToast'
+import { useAuthStore } from '@/store/authStore'
+
+function AutoLogin() {
+  const { isAuthenticated, isLoading, login } = useAuthStore()
+
+  useEffect(() => {
+    if (!isAuthenticated && !isLoading) {
+      login('ricardo@test.nl', 'ricardo@test.nl').catch(() => {})
+    }
+  }, [isAuthenticated, isLoading, login])
+
+  return null
+}
 
 export function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
@@ -26,6 +39,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <AutoLogin />
       {children}
       <PlayerEventToast />
       <Toaster
