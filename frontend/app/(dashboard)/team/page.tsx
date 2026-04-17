@@ -193,15 +193,27 @@ export default function TeamPage() {
       )}
 
       {/* Budget bar */}
-      <Card className="p-4">
+      <Card className={`p-4 ${budgetRemaining < 2 && budgetRemaining > 0 ? 'border border-red-500/40' : ''}`}>
         <div className="flex items-center justify-between mb-2">
           <span className="text-sm font-semibold">Budget</span>
           <div className="flex items-center gap-3 text-sm">
             <span className="text-gray-400">Gebruikt: <span className="text-white font-bold">{spent.toFixed(1)} cr</span></span>
-            <span className="text-[#00FF87] font-bold">Resterend: {budgetRemaining.toFixed(1)} cr</span>
+            <span className={`font-bold ${budgetRemaining < 2 ? 'text-red-400' : budgetRemaining < 5 ? 'text-yellow-400' : 'text-[#00FF87]'}`}>
+              Resterend: {budgetRemaining.toFixed(1)} cr
+            </span>
           </div>
         </div>
-        <ProgressBar value={spent} max={budget} color={budgetRemaining < 5 ? 'red' : 'green'} />
+        <ProgressBar value={spent} max={budget} color={budgetRemaining < 2 ? 'red' : budgetRemaining < 5 ? 'yellow' : 'green'} />
+        {budgetRemaining < 2 && budgetRemaining > 0 && (
+          <p className="text-xs text-red-400 mt-2 flex items-center gap-1.5">
+            ⚠️ Bijna geen budget meer — overweeg een goedkopere speler
+          </p>
+        )}
+        {budgetRemaining < 0 && (
+          <p className="text-xs text-red-400 font-bold mt-2 flex items-center gap-1.5">
+            ❌ Budget overschreden met {Math.abs(budgetRemaining).toFixed(1)} cr — verwijder een speler
+          </p>
+        )}
       </Card>
 
       <div className="grid lg:grid-cols-5 gap-6">
