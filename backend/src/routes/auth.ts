@@ -231,7 +231,30 @@ router.post('/daily-bonus', authenticate, async (req: AuthRequest, res: Response
       return
     }
 
-    const bonus = 50
+    // Calculate streak: count consecutive days with daily_bonus
+    const recentBonuses = await prisma.transaction.findMany({
+      where: { user_id: userId, type: 'daily_bonus' },
+      orderBy: { created_at: 'desc' },
+      take: 30,
+    })
+
+    let streak = 1
+    const todayMidnight = new Date()
+    todayMidnight.setHours(0, 0, 0, 0)
+
+    for (let i = 0; i < recentBonuses.length; i++) {
+      const bonusDay = new Date(recentBonuses[i].created_at)
+      bonusDay.setHours(0, 0, 0, 0)
+      const expected = new Date(todayMidnight)
+      expected.setDate(expected.getDate() - (i + 1))
+      if (bonusDay.getTime() === expected.getTime()) {
+        streak++
+      } else {
+        break
+      }
+    }
+
+    const bonus = Math.min(50 + (streak - 1) * 10, 200) // Scale: 50→200 coins based on streak
     await prisma.$transaction([
       prisma.user.update({
         where: { id: userId },
@@ -244,12 +267,12 @@ router.post('/daily-bonus', authenticate, async (req: AuthRequest, res: Response
           amount: 0,
           credits_amount: bonus,
           status: 'COMPLETED',
-          description: 'Dagelijkse inlogbonus',
+          description: `Dagelijkse inlogbonus (dag ${streak})`,
         },
       }),
     ])
 
-    sendSuccess(res, { claimed: true, bonus, message: `Je hebt ${bonus} coins ontvangen!` })
+    sendSuccess(res, { claimed: true, bonus, streak, message: `Je hebt ${bonus} coins ontvangen! (Dag ${streak} streak)` })
   } catch {
     sendError(res, 'Bonus claimen mislukt', 500)
   }

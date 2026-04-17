@@ -24,7 +24,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     api.post('/auth/daily-bonus').then(res => {
       const data = res.data?.data
       if (data?.claimed) {
-        toast.success(`🎁 Dagelijkse bonus: +${data.bonus} coins!`, { duration: 4000, icon: '🪙' })
+        const streakMsg = data.streak > 1 ? ` 🔥 ${data.streak} dagen streak!` : ''
+        toast.success(`🎁 Dagelijkse bonus: +${data.bonus} coins!${streakMsg}`, { duration: 5000, icon: '🪙' })
         refreshUser?.()
       }
     }).catch(() => {})
