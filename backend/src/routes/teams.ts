@@ -496,6 +496,50 @@ router.get('/my/transfers', authenticate, async (req: AuthRequest, res: Response
   }
 })
 
+// GET /teams/my/value — current team market value vs purchase prices
+router.get('/my/value', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const team = await prisma.team.findFirst({
+      where: { user_id: req.user!.id, ...(currentSeason ? { season_id: currentSeason.id } : {}) },
+      include: {
+        players: {
+          include: { player: { select: { id: true, name: true, position: true, price: true, photo_url: true } } },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    })
+
+    if (!team) { sendError(res, 'Geen team', 404); return }
+
+    const playerValues = team.players.map(tp => {
+      const currentPrice = Number(tp.player?.price ?? 0)
+      const purchasePrice = Number(tp.purchase_price)
+      return {
+        player_id: tp.player_id,
+        player_name: tp.player?.name,
+        position: tp.player?.position,
+        photo_url: tp.player?.photo_url,
+        purchase_price: purchasePrice,
+        current_price: currentPrice,
+        profit: currentPrice - purchasePrice,
+      }
+    })
+
+    const totalPurchase = playerValues.reduce((s, p) => s + p.purchase_price, 0)
+    const totalCurrent = playerValues.reduce((s, p) => s + p.current_price, 0)
+
+    sendSuccess(res, {
+      total_purchase_value: totalPurchase,
+      total_current_value: totalCurrent,
+      total_profit: totalCurrent - totalPurchase,
+      players: playerValues,
+    })
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 // GET /teams/my/upcoming-fixtures — next match for each club in user's team
 router.get('/my/upcoming-fixtures', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {

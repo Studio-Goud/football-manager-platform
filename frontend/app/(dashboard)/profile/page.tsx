@@ -12,12 +12,12 @@ import { Avatar } from '@/components/ui/Avatar'
 import { DepositModal } from '@/components/profile/DepositModal'
 import { TransactionTable } from '@/components/profile/TransactionTable'
 import { TierProgress } from '@/components/profile/TierProgress'
-import { PlusCircle, CreditCard, BarChart2, User, Trophy, Zap, Users, Medal, Bell } from 'lucide-react'
+import { PlusCircle, CreditCard, BarChart2, User, Trophy, Zap, Users, Medal, Bell, Activity } from 'lucide-react'
 import Link from 'next/link'
 import api from '@/lib/api'
 import { requestPushPermission } from '@/hooks/usePushNotifications'
 
-type Tab = 'overview' | 'transactions' | 'tier' | 'achievements'
+type Tab = 'overview' | 'transactions' | 'tier' | 'achievements' | 'activity'
 
 interface Achievement {
   id: number
@@ -66,8 +66,27 @@ export default function ProfilePage() {
   const txData = transactions ?? []
   const earnedCount = achievements.filter(a => a.earned).length
 
+  interface ActivityItem {
+    id: string
+    type: string
+    icon: string
+    title: string
+    coins: number
+    date: string
+  }
+  const { data: activityFeed = [] } = useQuery<ActivityItem[]>({
+    queryKey: ['activity-feed'],
+    queryFn: async () => {
+      const res = await api.get('/auth/activity')
+      return res.data.data
+    },
+    enabled: tab === 'activity',
+    staleTime: 60000,
+  })
+
   const tabs = [
     { key: 'overview' as Tab,      label: 'Overzicht',    icon: User },
+    { key: 'activity' as Tab,      label: 'Activiteit',   icon: Activity },
     { key: 'transactions' as Tab,  label: 'Transacties',  icon: CreditCard },
     { key: 'tier' as Tab,          label: 'Tier',         icon: BarChart2 },
     { key: 'achievements' as Tab,  label: 'Badges',       icon: Medal },
@@ -269,6 +288,36 @@ export default function ProfilePage() {
                 </motion.div>
               ))}
             </div>
+          </div>
+        )}
+
+        {tab === 'activity' && (
+          <div className="space-y-3">
+            {activityFeed.length === 0 ? (
+              <Card className="p-8 text-center">
+                <Activity className="w-8 h-8 text-gray-600 mx-auto mb-3" />
+                <p className="text-gray-500 text-sm">Nog geen activiteit</p>
+              </Card>
+            ) : (
+              <Card className="divide-y divide-[#1E2A45]">
+                {activityFeed.map(item => (
+                  <div key={item.id} className="flex items-center gap-3 px-4 py-3">
+                    <span className="text-2xl flex-shrink-0">{item.icon}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{item.title}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(item.date).toLocaleDateString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                      </p>
+                    </div>
+                    {item.coins !== 0 && (
+                      <span className={`text-sm font-black flex-shrink-0 ${item.coins > 0 ? 'text-[#00FF87]' : 'text-red-400'}`}>
+                        {item.coins > 0 ? '+' : ''}{item.coins}
+                      </span>
+                    )}
+                  </div>
+                ))}
+              </Card>
+            )}
           </div>
         )}
       </motion.div>

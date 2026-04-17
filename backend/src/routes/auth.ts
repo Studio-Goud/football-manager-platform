@@ -315,4 +315,88 @@ router.post('/daily-bonus', authenticate, async (req: AuthRequest, res: Response
   }
 })
 
+// GET /auth/activity — recent activity feed (achievements, challenges, duels, bonuses)
+router.get('/activity', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const userId = req.user!.id
+
+    const [transactions, userAchievements, duels] = await Promise.all([
+      prisma.transaction.findMany({
+        where: {
+          user_id: userId,
+          type: { in: ['achievement_reward', 'challenge_reward', 'daily_bonus', 'duel_win', 'transfer_in', 'transfer_out'] },
+        },
+        orderBy: { created_at: 'desc' },
+        take: 30,
+      }),
+      prisma.userAchievement.findMany({
+        where: { user_id: userId },
+        orderBy: { earned_at: 'desc' },
+        take: 10,
+      }),
+      prisma.duel.findMany({
+        where: {
+          OR: [{ challenger_id: userId }, { opponent_id: userId }],
+          status: 'COMPLETED',
+        },
+        include: {
+          challenger: { select: { username: true } },
+          opponent: { select: { username: true } },
+        },
+        orderBy: { created_at: 'desc' },
+        take: 5,
+      }),
+    ])
+
+    const ICONS: Record<string, string> = {
+      achievement_reward: '🏅',
+      challenge_reward: '🎯',
+      daily_bonus: '🌅',
+      duel_win: '⚔️',
+      transfer_in: '✅',
+      transfer_out: '↩️',
+    }
+
+    const activities = [
+      ...transactions.map(t => ({
+        id: `tx-${t.id}`,
+        type: t.type,
+        icon: ICONS[t.type] ?? '💰',
+        title: t.description ?? t.type,
+        coins: Number(t.credits_amount),
+        date: t.created_at,
+      })),
+      ...await Promise.all(userAchievements.map(async ua => {
+        const ach = await prisma.achievement.findUnique({ where: { id: ua.achievement_id }, select: { name: true, icon: true } })
+        return {
+          id: `ach-${ua.id}`,
+          type: 'achievement',
+          icon: ach?.icon ?? '🏅',
+          title: `Badge verdiend: ${ach?.name ?? 'Onbekend'}`,
+          coins: 0,
+          date: ua.earned_at,
+        }
+      })),
+      ...duels.map(d => {
+        const iWon = d.winner_id === userId
+        const opponent = d.challenger_id === userId ? d.opponent?.username : d.challenger?.username
+        return {
+          id: `duel-${d.id}`,
+          type: 'duel',
+          icon: iWon ? '🏆' : '❌',
+          title: iWon ? `Duel gewonnen van ${opponent}` : `Duel verloren van ${opponent}`,
+          coins: iWon ? Number(d.stake) * 2 : 0,
+          date: d.created_at,
+        }
+      }),
+    ]
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+    .slice(0, 30)
+
+    sendSuccess(res, activities)
+  } catch {
+    sendError(res, 'Activiteit ophalen mislukt', 500)
+  }
+})
+
 export default router
