@@ -285,6 +285,23 @@ export async function seedDemoData(): Promise<void> {
       }
     }
 
+    // 6. Seed sponsors (idempotent)
+    const sponsorCount = await prisma.sponsor.count()
+    if (sponsorCount === 0) {
+      const sponsorData = [
+        { name: 'Nike', logo: '👟', weekly_income: 50, requirement: 'Top 75% in je competitie', tier: 'BRONZE', description: 'De iconische sportgigant. Beschikbaar voor alle managers.' },
+        { name: 'Adidas', logo: '⚽', weekly_income: 75, requirement: 'Top 50% in je competitie', tier: 'BRONZE', description: 'Drie strepen, onbeperkt potentieel. Beschikbaar voor actieve managers.' },
+        { name: 'Heineken', logo: '🍺', weekly_income: 100, requirement: 'Top 40% in je competitie', tier: 'SILVER', description: 'Officieel bier van de UEFA Champions League. Voor ervaren managers.' },
+        { name: 'Jumbo', logo: '🛒', weekly_income: 125, requirement: 'Minimaal 3 goals per ronde in jouw team', tier: 'SILVER', description: 'Vers en betaalbaar. Voor managers met aanvallende instelling.' },
+        { name: 'Red Bull', logo: '🐂', weekly_income: 175, requirement: 'Top 25% in je competitie', tier: 'GOLD', description: 'Geeft je vleugels. Alleen voor de beste managers.' },
+        { name: 'Emirates', logo: '✈️', weekly_income: 250, requirement: 'Top 10% in je competitie', tier: 'GOLD', description: 'Eerste klas sponsoring voor elite managers.' },
+      ]
+      for (const s of sponsorData) {
+        await prisma.sponsor.create({ data: s })
+      }
+      logger.info('Sponsors geseed', { count: sponsorData.length })
+    }
+
     logger.info('Demo seed voltooid!')
   } catch (err) {
     logger.warn('Demo seed mislukt (niet kritiek)', { err })
