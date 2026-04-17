@@ -84,6 +84,10 @@ export function useLive() {
     socket.on('gameweek:new', (...args: unknown[]) => {
       const data = args[0] as { gameweek_number: number }
       window.dispatchEvent(new CustomEvent('sim-new-gw', { detail: data }))
+      toast(`🎮 Speelronde ${data.gameweek_number} is begonnen!`, {
+        duration: 6000,
+        style: { background: '#111827', border: '1px solid #00FF87', borderRadius: '12px', color: '#fff', fontSize: '14px' },
+      })
     })
 
     socket.on('user:challenge', (...args: unknown[]) => {
