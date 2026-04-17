@@ -1,14 +1,16 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Trophy, TrendingUp, Zap, ArrowUp, ArrowDown, Star, Users } from 'lucide-react'
+import { Trophy, TrendingUp, Zap, ArrowUp, ArrowDown, Star, Users, Calendar } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { useLive } from '@/hooks/useLive'
 import { useTeam } from '@/hooks/useTeam'
+import { useQuery } from '@tanstack/react-query'
 import { Card } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Skeleton } from '@/components/ui/Skeleton'
+import api from '@/lib/api'
 import Link from 'next/link'
 
 export default function DashboardPage() {
@@ -16,6 +18,17 @@ export default function DashboardPage() {
   const { livePoints, matches } = useLive()
   const { data: leaderboard } = useLeaderboard()
   const { team, isLoading: teamLoading } = useTeam()
+
+  const { data: todayFixtures = [] } = useQuery({
+    queryKey: ['today-fixtures'],
+    queryFn: async () => {
+      const res = await api.get('/matches/today')
+      return res.data.data as Array<{ fixture_id: string; home_team: string; away_team: string; kickoff_time: string; status: string; home_score?: number; away_score?: number }>
+    },
+    staleTime: 300000,
+  })
+
+  const myClubs = new Set((team?.players ?? []).map(tp => tp.player?.club).filter(Boolean))
 
   const liveMatch = matches.find(m => {
     const s = (m.status as string).toUpperCase()
@@ -177,6 +190,48 @@ export default function DashboardPage() {
           </div>
         </Card>
       </div>
+
+      {/* Today's fixtures */}
+      {todayFixtures.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold text-lg flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-[#3B82F6]" />
+              Wedstrijden vandaag
+            </h2>
+            <Link href="/live" className="text-[#00FF87] text-sm hover:underline">Live →</Link>
+          </div>
+          <div className="space-y-2">
+            {todayFixtures.slice(0, 5).map((f) => {
+              const hasMyPlayer = myClubs.has(f.home_team) || myClubs.has(f.away_team)
+              const isLive = ['LIVE', '1H', '2H', 'HT'].includes((f.status ?? '').toUpperCase())
+              const kickoff = f.kickoff_time ? new Date(f.kickoff_time).toLocaleTimeString('nl-NL', { hour: '2-digit', minute: '2-digit' }) : ''
+              return (
+                <div
+                  key={f.fixture_id}
+                  className={`flex items-center gap-3 p-3 rounded-xl ${hasMyPlayer ? 'bg-[#00FF87]/5 border border-[#00FF87]/20' : 'bg-[#0A0E1A]'}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-semibold">{f.home_team}</span>
+                      <span className="text-gray-600 text-xs">vs</span>
+                      <span className="text-sm font-semibold">{f.away_team}</span>
+                    </div>
+                    {hasMyPlayer && <span className="text-xs text-[#00FF87]">⚡ Jouw speler speelt</span>}
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    {isLive ? (
+                      <span className="text-xs text-[#00FF87] font-bold animate-pulse">LIVE {f.home_score}–{f.away_score}</span>
+                    ) : (
+                      <span className="text-xs text-gray-400">{kickoff}</span>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </Card>
+      )}
 
       {/* Mini leaderboard */}
       {leaderboard?.entries && leaderboard.entries.length > 0 && (
