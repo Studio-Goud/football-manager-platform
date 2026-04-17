@@ -63,7 +63,16 @@ export default function TeamPage() {
   }, [team])
   const [selectedPlayer, setSelectedPlayer] = useState<(TeamPlayer & { player?: Player }) | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<number | null>(null)
+  const [selectedSlotPosition, setSelectedSlotPosition] = useState<'GK' | 'DEF' | 'MID' | 'FWD' | 'ALL'>('ALL')
   const [showTransfer, setShowTransfer] = useState(false)
+
+  function getPositionForSlot(slot: number): 'GK' | 'DEF' | 'MID' | 'FWD' | 'ALL' {
+    if (slot === 1) return 'GK'
+    if (slot >= 2 && slot <= 5) return 'DEF'
+    if (slot >= 6 && slot <= 9) return 'MID'
+    if (slot === 10 || slot === 11) return 'FWD'
+    return 'ALL'
+  }
 
 
   const budget = 100
@@ -85,6 +94,7 @@ export default function TeamPage() {
       return
     }
     setSelectedSlot(slot)
+    setSelectedSlotPosition(getPositionForSlot(slot))
     setShowTransfer(true)
   }
 
@@ -248,6 +258,7 @@ export default function TeamPage() {
                 onSelectPlayer={handleAddPlayer}
                 excludeIds={excludedIds}
                 budget={budgetRemaining}
+                defaultPosition={selectedSlotPosition}
               />
             </Card>
           ) : selectedPlayer ? (

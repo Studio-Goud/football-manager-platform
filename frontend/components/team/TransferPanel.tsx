@@ -14,6 +14,7 @@ interface TransferPanelProps {
   onSelectPlayer: (player: Player) => void
   excludeIds?: (string | number)[]
   budget?: number
+  defaultPosition?: PlayerPosition | 'ALL'
 }
 
 const positions: { label: string; value: PlayerPosition | 'ALL' }[] = [
@@ -24,9 +25,9 @@ const positions: { label: string; value: PlayerPosition | 'ALL' }[] = [
   { label: 'FWD', value: 'FWD' },
 ]
 
-export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }: TransferPanelProps) {
+export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100, defaultPosition = 'ALL' }: TransferPanelProps) {
   const [search, setSearch] = useState('')
-  const [position, setPosition] = useState<PlayerPosition | 'ALL'>('ALL')
+  const [position, setPosition] = useState<PlayerPosition | 'ALL'>(defaultPosition)
   const [maxPrice, setMaxPrice] = useState(20)
   const [sortBy, setSortBy] = useState<'price' | 'form' | 'points'>('form')
   const [leagueId, setLeagueId] = useState<number | null>(null)
