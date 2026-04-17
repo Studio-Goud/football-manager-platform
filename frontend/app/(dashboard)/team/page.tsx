@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Info } from 'lucide-react'
+import { Save, RefreshCw, Info, Lock } from 'lucide-react'
 import { useTeamStore } from '@/store/teamStore'
 import { Formation, Player, TeamPlayer } from '@/types'
 import { PitchView } from '@/components/team/PitchView'
@@ -15,12 +15,25 @@ import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { ProgressBar } from '@/components/ui/ProgressBar'
 import { useTeam } from '@/hooks/useTeam'
+import { useQuery } from '@tanstack/react-query'
+import api from '@/lib/api'
 import toast from 'react-hot-toast'
 
 export default function TeamPage() {
   const { setFormation } = useTeamStore()
   const { team, isLoading, saveTeam, isSaving } = useTeam()
   const [formation, setFormationLocal] = useState<Formation>('4-4-2')
+
+  const { data: gameweek } = useQuery({
+    queryKey: ['current-gameweek'],
+    queryFn: async () => {
+      const res = await api.get('/matches/current-gameweek')
+      return res.data.data as { deadline: string; number: number }
+    },
+    staleTime: 60000,
+  })
+
+  const isDeadlinePassed = gameweek?.deadline ? new Date(gameweek.deadline) < new Date() : false
   const [tactic, setTacticLocal] = useState<TacticStyle>('BALANCED')
   const [players, setPlayers] = useState<TeamPlayer[]>([])
 
@@ -51,6 +64,10 @@ export default function TeamPage() {
   }
 
   const handleSlotClick = (slot: number) => {
+    if (isDeadlinePassed) {
+      toast.error('Deadline verstreken — transfers geblokkeerd')
+      return
+    }
     setSelectedSlot(slot)
     setShowTransfer(true)
   }
@@ -117,13 +134,32 @@ export default function TeamPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black">Mijn Team</h1>
-          <p className="text-gray-400 text-sm mt-1">Deadline: Vrijdag 18:00 · Speelronde 28</p>
+          <p className="text-gray-400 text-sm mt-1">
+            {gameweek ? (
+              isDeadlinePassed
+                ? `GW${gameweek.number} · Deadline verstreken`
+                : `GW${gameweek.number} · Deadline: ${new Date(gameweek.deadline).toLocaleString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}`
+            ) : 'Laden...'}
+          </p>
         </div>
-        <Button onClick={handleSave} loading={isSaving} className="hidden sm:flex">
-          <Save className="w-4 h-4 mr-2" />
-          Opslaan
-        </Button>
+        {!isDeadlinePassed && (
+          <Button onClick={handleSave} loading={isSaving} className="hidden sm:flex">
+            <Save className="w-4 h-4 mr-2" />
+            Opslaan
+          </Button>
+        )}
       </div>
+
+      {/* Deadline lock banner */}
+      {isDeadlinePassed && (
+        <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 flex items-center gap-3">
+          <Lock className="w-5 h-5 text-orange-400 flex-shrink-0" />
+          <div>
+            <p className="font-semibold text-orange-400 text-sm">Transfers vergrendeld</p>
+            <p className="text-xs text-gray-400">De deadline voor deze speelronde is verstreken. Je kunt geen wijzigingen meer maken.</p>
+          </div>
+        </div>
+      )}
 
       {/* Budget bar */}
       <Card className="p-4">
