@@ -12,9 +12,10 @@ import { Avatar } from '@/components/ui/Avatar'
 import { DepositModal } from '@/components/profile/DepositModal'
 import { TransactionTable } from '@/components/profile/TransactionTable'
 import { TierProgress } from '@/components/profile/TierProgress'
-import { PlusCircle, CreditCard, BarChart2, User, Trophy, Zap, Users, Medal } from 'lucide-react'
+import { PlusCircle, CreditCard, BarChart2, User, Trophy, Zap, Users, Medal, Bell } from 'lucide-react'
 import Link from 'next/link'
 import api from '@/lib/api'
+import { requestPushPermission } from '@/hooks/usePushNotifications'
 
 type Tab = 'overview' | 'transactions' | 'tier' | 'achievements'
 
@@ -92,7 +93,7 @@ export default function ProfilePage() {
                 : Number(currentUser.balance_credits).toLocaleString()}
             </p>
             <p className="text-sm text-gray-400">coins</p>
-            <div className="flex gap-2 mt-3">
+            <div className="flex gap-2 mt-3 flex-wrap justify-center sm:justify-end">
               <button
                 onClick={() => setDepositOpen(true)}
                 className="flex items-center gap-1.5 bg-[#00FF87] text-[#0A0E1A] px-3 py-1.5 rounded-lg text-sm font-bold hover:bg-[#00CC6A] transition-colors"
@@ -100,6 +101,15 @@ export default function ProfilePage() {
                 <PlusCircle className="w-4 h-4" />
                 Coins kopen
               </button>
+              {'Notification' in window && Notification.permission !== 'granted' && (
+                <button
+                  onClick={() => requestPushPermission()}
+                  className="flex items-center gap-1.5 bg-[#1E2A45] text-gray-300 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-[#2A3A55] transition-colors"
+                >
+                  <Bell className="w-4 h-4" />
+                  Meldingen
+                </button>
+              )}
             </div>
           </div>
         </div>

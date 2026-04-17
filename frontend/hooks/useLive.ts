@@ -1,4 +1,5 @@
 import { useEffect, useCallback } from 'react'
+import { showLocalNotification } from './usePushNotifications'
 import { useQuery } from '@tanstack/react-query'
 import { useLiveStore } from '@/store/liveStore'
 import { getSocket } from '@/lib/socket'
@@ -44,6 +45,15 @@ export function useLive() {
       setLivePoints(data.total_points)
       if (data.delta > 0 && data.event) {
         const ev = data.event
+        // Push notification when tab is not visible
+        if (document.visibilityState === 'hidden') {
+          const label = ev.player_name ?? 'Jouw speler'
+          showLocalNotification(
+            `+${data.delta} punten!`,
+            `${label} heeft gescoord — totaal ${data.total_points} punten`,
+            '/dashboard'
+          )
+        }
         toast.custom(
           React.createElement(LivePointsToast, {
             playerName: ev.player_name ?? 'Speler',

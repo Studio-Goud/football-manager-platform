@@ -1,4 +1,4 @@
-const CACHE = 'fmpro-v1'
+const CACHE = 'fmpro-v2'
 const STATIC = [
   '/',
   '/dashboard',
@@ -39,5 +39,37 @@ self.addEventListener('fetch', e => {
       }
       return res
     }))
+  )
+})
+
+// Push notifications
+self.addEventListener('push', e => {
+  if (!e.data) return
+
+  let data = {}
+  try { data = e.data.json() } catch { data = { title: 'Football Manager', body: e.data.text() } }
+
+  const { title = 'Football Manager', body = '', icon = '/icons/icon-192.png', url = '/dashboard', badge = '/icons/icon-192.png' } = data
+
+  e.waitUntil(
+    self.registration.showNotification(title, {
+      body,
+      icon,
+      badge,
+      data: { url },
+      vibrate: [100, 50, 100],
+    })
+  )
+})
+
+self.addEventListener('notificationclick', e => {
+  e.notification.close()
+  const url = e.notification.data?.url ?? '/dashboard'
+  e.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(list => {
+      const existing = list.find(c => c.url.includes(url))
+      if (existing) return existing.focus()
+      return clients.openWindow(url)
+    })
   )
 })

@@ -8,10 +8,12 @@ import { LiveScoreBar } from '@/components/layout/LiveScoreBar'
 import { GameweekTimer } from '@/components/layout/GameweekTimer'
 import { PullToRefresh } from '@/components/ui/PullToRefresh'
 import { OnboardingModal, useOnboarding } from '@/components/onboarding/OnboardingModal'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { show: showOnboarding, complete: completeOnboarding } = useOnboarding()
+  usePushNotifications()
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] flex">
