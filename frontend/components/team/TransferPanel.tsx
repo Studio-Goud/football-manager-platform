@@ -8,6 +8,7 @@ import { PlayerCard } from './PlayerCard'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PlayerDetailModal } from '@/components/player/PlayerDetailModal'
 import api from '@/lib/api'
+import { PlayerCompareModal } from '@/components/player/PlayerCompareModal'
 
 interface TransferPanelProps {
   onSelectPlayer: (player: Player) => void
@@ -30,6 +31,7 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
   const [sortBy, setSortBy] = useState<'price' | 'form' | 'points'>('form')
   const [leagueId, setLeagueId] = useState<number | null>(null)
   const [detailPlayer, setDetailPlayer] = useState<Player | null>(null)
+  const [comparePlayer, setComparePlayer] = useState<Player | null>(null)
 
   const { data: leagues } = useQuery({
     queryKey: ['player-leagues'],
@@ -154,12 +156,20 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
                 compact
                 onClick={() => onSelectPlayer(player)}
               />
-              <button
-                onClick={(e) => { e.stopPropagation(); setDetailPlayer(player) }}
-                className="absolute right-2 top-1/2 -translate-y-1/2 text-[9px] text-gray-500 hover:text-[#00FF87] bg-[#0A0E1A] px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
-              >
-                info
-              </button>
+              <div className="absolute right-2 top-1/2 -translate-y-1/2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button
+                  onClick={(e) => { e.stopPropagation(); setDetailPlayer(player) }}
+                  className="text-[9px] text-gray-500 hover:text-[#00FF87] bg-[#0A0E1A] px-1.5 py-0.5 rounded"
+                >
+                  info
+                </button>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setComparePlayer(player) }}
+                  className="text-[9px] text-gray-500 hover:text-[#3B82F6] bg-[#0A0E1A] px-1.5 py-0.5 rounded"
+                >
+                  vs
+                </button>
+              </div>
             </div>
           ))
         )}
@@ -175,6 +185,14 @@ export function TransferPanel({ onSelectPlayer, excludeIds = [], budget = 100 }:
         onAddToTeam={onSelectPlayer}
         showAddButton
       />
+
+      {comparePlayer && (
+        <PlayerCompareModal
+          initialPlayer={comparePlayer}
+          onClose={() => setComparePlayer(null)}
+          onSelectPlayer={onSelectPlayer}
+        />
+      )}
     </div>
   )
 }
