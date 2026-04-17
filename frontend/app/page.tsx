@@ -10,8 +10,8 @@ import {
 const features = [
   {
     icon: Trophy,
-    title: 'Echte Prijzenpotten',
-    description: 'Winst direct op je rekening. Transparante uitkering. Top 20% wint altijd.',
+    title: 'Coin Beloningen',
+    description: 'Top managers verdienen coins elke speelronde. Gebruik ze voor transfers en power-ups.',
     color: '#FFD700',
   },
   {
@@ -49,8 +49,8 @@ const features = [
 const steps = [
   {
     number: '01',
-    title: 'Stort & Join',
-    description: 'Stort €5 tot €100, ontvang credits en meld je aan voor het seizoen.',
+    title: 'Gratis Starten',
+    description: 'Registreer gratis, ontvang startcoins en meld je aan voor het seizoen.',
   },
   {
     number: '02',
@@ -65,11 +65,11 @@ const steps = [
 ]
 
 const mockLeaderboard = [
-  { rank: 1, name: 'VoetbalKoning_NL', points: 1847, prize: '€847', trend: '+2' },
-  { rank: 2, name: 'GoalMachine99', points: 1791, prize: '€564', trend: '+1' },
-  { rank: 3, name: 'TacticoMaster', points: 1765, prize: '€338', trend: '-2' },
-  { rank: 4, name: 'OranjeManager', points: 1741, prize: '€169', trend: '+5' },
-  { rank: 5, name: 'EredivisieExpert', points: 1698, prize: '€169', trend: '-1' },
+  { rank: 1, name: 'VoetbalKoning_NL', points: 1847, prize: '2000 coins', trend: '+2' },
+  { rank: 2, name: 'GoalMachine99', points: 1791, prize: '1000 coins', trend: '+1' },
+  { rank: 3, name: 'TacticoMaster', points: 1765, prize: '500 coins', trend: '-2' },
+  { rank: 4, name: 'OranjeManager', points: 1741, prize: '200 coins', trend: '+5' },
+  { rank: 5, name: 'EredivisieExpert', points: 1698, prize: '200 coins', trend: '-1' },
 ]
 
 export default function LandingPage() {
@@ -119,16 +119,16 @@ export default function LandingPage() {
             </span>
 
             <h1 className="text-5xl sm:text-7xl font-black mb-6 leading-tight">
-              De Eerste
+              De Meest
               <br />
-              <span className="text-[#00FF87]">Real-Money</span>
+              <span className="text-[#00FF87]">Diepgaande</span>
               <br />
-              Skill Football Manager
+              Fantasy Football Manager
             </h1>
 
             <p className="text-xl text-gray-400 max-w-2xl mx-auto mb-10">
-              Bouw jouw team, volg live wedstrijden en win echte prijzenpotten.
-              Jouw voetbalkennis bepaalt jouw winst.
+              Bouw jouw team, volg live wedstrijden en verdien coins.
+              Jouw voetbalkennis bepaalt jouw succes.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -136,7 +136,7 @@ export default function LandingPage() {
                 href="/register"
                 className="flex items-center justify-center gap-2 bg-[#00FF87] text-[#0A0E1A] px-8 py-4 rounded-xl text-lg font-bold hover:bg-[#00CC6A] transition-all hover:scale-105 shadow-lg shadow-[#00FF87]/20"
               >
-                Start nu voor €5
+                Gratis starten
                 <ArrowRight className="w-5 h-5" />
               </Link>
               <Link
@@ -158,8 +158,8 @@ export default function LandingPage() {
           >
             {[
               { label: 'Actieve Managers', value: '12.847' },
-              { label: 'Totale Prijzenpot', value: '€284.000' },
-              { label: 'Gemiddelde Winst', value: '+34%' },
+              { label: 'Uitgedeelde Coins', value: '284K' },
+              { label: 'Gemiddelde Score', value: '847 pt' },
               { label: 'Live Wedstrijden', value: '380/seizoen' },
             ].map((stat) => (
               <div
@@ -179,7 +179,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-black mb-4">Hoe werkt het?</h2>
-            <p className="text-gray-400">In drie stappen naar jouw eerste winst</p>
+            <p className="text-gray-400">In drie stappen aan de slag</p>
           </div>
 
           <div className="grid sm:grid-cols-3 gap-8">
@@ -243,7 +243,7 @@ export default function LandingPage() {
         <div className="max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="text-3xl sm:text-4xl font-black mb-4">Top Managers – Live</h2>
-            <p className="text-gray-400">Speelronde 28 • Eredivisie 2024/25 • Prijzenpot: €12.400</p>
+            <p className="text-gray-400">Speelronde 28 • Eredivisie 2024/25 • Coin beloningen</p>
           </div>
 
           <div className="bg-[#0F1629] border border-[#1E2A45] rounded-2xl overflow-hidden">
@@ -294,7 +294,7 @@ export default function LandingPage() {
               href="/register"
               className="inline-flex items-center gap-2 bg-[#00FF87] text-[#0A0E1A] px-8 py-4 rounded-xl text-lg font-bold hover:bg-[#00CC6A] transition-all hover:scale-105"
             >
-              Doe mee en win
+              Doe mee en verdien
               <ArrowRight className="w-5 h-5" />
             </Link>
           </div>
@@ -314,14 +314,12 @@ export default function LandingPage() {
             <div className="flex gap-6 text-sm text-gray-500">
               <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
               <Link href="#" className="hover:text-white transition-colors">Voorwaarden</Link>
-              <Link href="#" className="hover:text-white transition-colors">Responsible Gaming</Link>
               <Link href="#" className="hover:text-white transition-colors">Contact</Link>
             </div>
           </div>
           <p className="text-xs text-gray-600 mt-6 text-center max-w-2xl mx-auto">
-            FootballManager Pro is een skill-based gamingplatform. Deelname is uitsluitend voor personen van 18 jaar en ouder.
-            Verantwoord spelen staat voorop. Speel nooit met geld dat je je niet kunt veroorloven te verliezen.
-            MGA/B2C/123/2024 — Malta Gaming Authority.
+            FootballManager Pro is een skill-based fantasy football platform. Coins zijn intern betaalmiddel en niet inwisselbaar voor geld.
+            Geen gokken, geen prijzenpotten — puur voetbalkennis en strategie.
           </p>
         </div>
       </footer>

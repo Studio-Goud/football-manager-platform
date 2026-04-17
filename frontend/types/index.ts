@@ -197,8 +197,7 @@ export interface Powerup {
 export type TransactionType =
   | 'deposit'
   | 'withdrawal'
-  | 'entry_fee'
-  | 'prize_payout'
+  | 'coin_reward'
   | 'marketplace_sale'
   | 'marketplace_purchase'
   | 'powerup_purchase'
@@ -236,7 +235,6 @@ export interface Leaderboard {
   gameweek: number
   entries: LeaderboardEntry[]
   total_participants: number
-  prize_pool: number
   updated_at: string
 }
 
@@ -248,8 +246,6 @@ export interface Season {
   id: string
   name: string
   status: SeasonStatus
-  entry_fee: number
-  prize_pool: number
   current_gameweek: number
   total_gameweeks: number
   start_date: string

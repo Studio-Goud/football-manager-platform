@@ -10,10 +10,9 @@ interface TransactionTableProps {
 }
 
 const typeConfig: Record<TransactionType, { label: string; color: string; prefix: string }> = {
-  deposit: { label: 'Storting', color: '#00FF87', prefix: '+' },
+  deposit: { label: 'Coins ontvangen', color: '#00FF87', prefix: '+' },
   withdrawal: { label: 'Opname', color: '#EF4444', prefix: '-' },
-  entry_fee: { label: 'Inschrijfgeld', color: '#EF4444', prefix: '-' },
-  prize_payout: { label: 'Prijs', color: '#FFD700', prefix: '+' },
+  coin_reward: { label: 'Coin beloning', color: '#FFD700', prefix: '+' },
   marketplace_sale: { label: 'Verkoop', color: '#00FF87', prefix: '+' },
   marketplace_purchase: { label: 'Aankoop', color: '#EF4444', prefix: '-' },
   powerup_purchase: { label: 'Power-up', color: '#9B59B6', prefix: '-' },
@@ -24,8 +23,7 @@ const typeConfig: Record<TransactionType, { label: string; color: string; prefix
 const typeFilters: { value: TransactionType | 'all'; label: string }[] = [
   { value: 'all', label: 'Alle' },
   { value: 'deposit', label: 'Stortingen' },
-  { value: 'withdrawal', label: 'Opnames' },
-  { value: 'prize_payout', label: 'Prijzen' },
+  { value: 'coin_reward', label: 'Beloningen' },
   { value: 'marketplace_sale', label: 'Verkopen' },
   { value: 'marketplace_purchase', label: 'Aankopen' },
 ]

@@ -220,17 +220,17 @@ export const MARKETPLACE_CONFIG = {
   max_active_listings_per_user: 10,
 }
 
-// ─── Financial Configuration ───────────────────────────────────────────────────
+// ─── Coin Configuration ────────────────────────────────────────────────────────
 
 export const FINANCIAL_CONFIG = {
-  min_deposit: 5,
-  max_deposit_daily: 500,
-  max_deposit_weekly: 2000,
-  max_deposit_monthly: 5000,
-  min_withdrawal: 10,
-  max_withdrawal_daily: 1000,
-  withdrawal_processing_days: 3,
-  early_withdrawal_penalty: 0.10, // 10% if season active
+  min_deposit: 0,
+  max_deposit_daily: 10000,
+  max_deposit_weekly: 50000,
+  max_deposit_monthly: 100000,
+  min_withdrawal: 0,
+  max_withdrawal_daily: 0,
+  withdrawal_processing_days: 0,
+  early_withdrawal_penalty: 0,
 }
 
 // ─── Navigation ────────────────────────────────────────────────────────────────

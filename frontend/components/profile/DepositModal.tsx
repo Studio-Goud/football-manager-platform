@@ -8,10 +8,10 @@ import { Coins, Zap, Star, Crown } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 const PACKAGES = [
-  { id: 'starter', label: 'Starter',  price_eur: 5,  coins: 500,  bonus_pct: 0,  icon: Coins,  color: '#64748B' },
-  { id: 'pro',     label: 'Pro',      price_eur: 10, coins: 1100, bonus_pct: 10, icon: Zap,    color: '#3B82F6' },
-  { id: 'elite',   label: 'Elite',    price_eur: 25, coins: 3000, bonus_pct: 20, icon: Star,   color: '#8B5CF6' },
-  { id: 'legend',  label: 'Legend',   price_eur: 50, coins: 6500, bonus_pct: 30, icon: Crown,  color: '#F59E0B' },
+  { id: 'starter', label: 'Starter',  coins: 500,  bonus_pct: 0,  icon: Coins,  color: '#64748B', description: 'Begin pakket' },
+  { id: 'pro',     label: 'Pro',      coins: 1100, bonus_pct: 10, icon: Zap,    color: '#3B82F6', description: 'Meest populair' },
+  { id: 'elite',   label: 'Elite',    coins: 3000, bonus_pct: 20, icon: Star,   color: '#8B5CF6', description: 'Serieuze manager' },
+  { id: 'legend',  label: 'Legend',   coins: 6500, bonus_pct: 30, icon: Crown,  color: '#F59E0B', description: 'Top manager' },
 ]
 
 interface DepositModalProps {
@@ -58,10 +58,10 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
     <Modal isOpen={isOpen} onClose={handleClose} title="Coins kopen">
       {step === 'shop' && (
         <div className="space-y-5">
-          <p className="text-sm text-gray-400">
-            Coins zijn intern betaalmiddel — niet inwisselbaar voor geld.
-            Gebruik ze voor transfers, duels en power-ups.
-          </p>
+          <div className="bg-[#00FF87]/5 border border-[#00FF87]/20 rounded-xl p-3">
+            <p className="text-sm text-[#00FF87] font-medium">Coins zijn intern betaalmiddel</p>
+            <p className="text-xs text-gray-400 mt-0.5">Niet inwisselbaar voor geld. Gebruik ze voor transfers, duels en power-ups.</p>
+          </div>
 
           <div className="grid grid-cols-2 gap-3">
             {PACKAGES.map(p => {
@@ -84,7 +84,7 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
                   <p className="font-bold text-sm">{p.label}</p>
                   <p className="text-[#00FF87] font-black text-lg">{p.coins.toLocaleString()}</p>
                   <p className="text-xs text-gray-500">coins</p>
-                  <p className="text-xs text-gray-400 mt-1">€{p.price_eur}</p>
+                  <p className="text-xs text-gray-600 mt-1">{p.description}</p>
                 </button>
               )
             })}
@@ -95,20 +95,16 @@ export function DepositModal({ isOpen, onClose }: DepositModalProps) {
               <span className="text-gray-400">Pakket</span>
               <span>{pkg.label}</span>
             </div>
-            <div className="flex justify-between">
-              <span className="text-gray-400">Coins</span>
-              <span className="text-[#00FF87] font-bold">{pkg.coins.toLocaleString()}</span>
-            </div>
             <div className="flex justify-between font-bold border-t border-[#1E2A45] pt-2">
-              <span>Prijs</span>
-              <span>€{pkg.price_eur}</span>
+              <span>Coins</span>
+              <span className="text-[#00FF87]">{pkg.coins.toLocaleString()} coins</span>
             </div>
           </div>
 
           <div className="flex gap-3">
             <Button onClick={handleBuy} className="flex-1">
               <Coins className="w-4 h-4 mr-2" />
-              Kopen voor €{pkg.price_eur}
+              {pkg.coins.toLocaleString()} coins claimen
             </Button>
             <Button variant="ghost" onClick={handleClose} className="flex-1">Annuleren</Button>
           </div>

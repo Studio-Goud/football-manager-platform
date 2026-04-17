@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, Plus, LogIn, Trophy, Copy, Check, Crown, Lock, ChevronRight, Euro } from 'lucide-react'
+import { Users, Plus, LogIn, Trophy, Copy, Check, Crown, Lock, ChevronRight } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import Link from 'next/link'
@@ -17,7 +17,6 @@ interface PrivateLeague {
   owner_id: string
   max_members: number
   league_filter: string | null
-  pot_amount: number | null
   member_count: number
   is_owner: boolean
   members: Array<{ user: { id: string; username: string; tier: string }; joined_at: string; is_owner: boolean }>
@@ -69,14 +68,6 @@ function LeagueCard({ league }: { league: PrivateLeague }) {
         </div>
       </div>
 
-      {/* Pot */}
-      {league.pot_amount && (
-        <div className="flex items-center gap-2 bg-[#F59E0B]/5 border border-[#F59E0B]/20 rounded-xl px-4 py-2.5">
-          <Euro className="w-4 h-4 text-[#F59E0B]" />
-          <span className="text-sm text-[#F59E0B] font-medium">Pot: €{league.pot_amount} p.p. · onderling te verrekenen</span>
-        </div>
-      )}
-
       {/* Join code */}
       <div className="flex items-center gap-2 bg-[#0A0E1A] rounded-xl px-4 py-3">
         <Lock className="w-4 h-4 text-gray-500" />
@@ -125,7 +116,6 @@ export default function LeaguesPage() {
     name: '',
     max_members: 20,
     league_filter: null as string | null,
-    pot_amount: '' as string,
   })
   const [joinCode, setJoinCode] = useState('')
 
@@ -143,7 +133,7 @@ export default function LeaguesPage() {
       toast.success(res.data.message)
       qc.invalidateQueries({ queryKey: ['private-leagues'] })
       setModal('none')
-      setCreateForm({ name: '', max_members: 20, league_filter: null, pot_amount: '' })
+      setCreateForm({ name: '', max_members: 20, league_filter: null })
     },
     onError: (err: any) => toast.error(err?.response?.data?.message ?? 'Aanmaken mislukt'),
   })
@@ -165,7 +155,6 @@ export default function LeaguesPage() {
       name: createForm.name,
       max_members: createForm.max_members,
       league_filter: createForm.league_filter || null,
-      pot_amount: createForm.pot_amount ? Number(createForm.pot_amount) : null,
     })
   }
 
@@ -174,7 +163,7 @@ export default function LeaguesPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-black">Vrienden Competities</h1>
-          <p className="text-gray-400 text-sm mt-1">Speel met vrienden — met een privépot als je wilt.</p>
+          <p className="text-gray-400 text-sm mt-1">Maak privé competities met vrienden en verdien coins.</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -203,7 +192,7 @@ export default function LeaguesPage() {
           <Trophy className="w-12 h-12 text-gray-600 mx-auto mb-4" />
           <h3 className="text-lg font-bold mb-2">Nog geen competities</h3>
           <p className="text-gray-400 text-sm mb-6 max-w-sm mx-auto">
-            Maak een privé competitie aan voor je vrienden. Optioneel kun je een pot instellen — jullie regelen de betaling zelf onderling.
+            Maak een privé competitie aan voor je vrienden. De winnaar krijgt coins als beloning.
           </p>
           <div className="flex gap-3 justify-center">
             <button onClick={() => setModal('join')} className="px-5 py-2.5 border border-[#1E2A45] text-white rounded-xl text-sm font-medium hover:border-[#00FF87]/30 transition-colors">
@@ -265,26 +254,6 @@ export default function LeaguesPage() {
                           {opt.icon} {opt.label}
                         </button>
                       ))}
-                    </div>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-1">
-                      Pot per persoon (optioneel)
-                    </label>
-                    <p className="text-xs text-gray-500 mb-2">
-                      Informatief — jullie regelen dit zelf onderling. Het platform beheert geen geld.
-                    </p>
-                    <div className="relative">
-                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400">€</span>
-                      <input
-                        type="number"
-                        min={0}
-                        value={createForm.pot_amount}
-                        onChange={e => setCreateForm(f => ({ ...f, pot_amount: e.target.value }))}
-                        placeholder="0"
-                        className="w-full bg-[#0A0E1A] border border-[#1E2A45] rounded-xl pl-8 pr-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#00FF87]"
-                      />
                     </div>
                   </div>
 

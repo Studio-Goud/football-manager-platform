@@ -12,10 +12,10 @@ const router = Router()
 // Coins zijn intern en NIET inwisselbaar voor echt geld (geen kansspel)
 
 export const COIN_PACKAGES = [
-  { id: 'starter',  label: 'Starter',  price_eur: 5,  coins: 500,  bonus_pct: 0  },
-  { id: 'pro',      label: 'Pro',      price_eur: 10, coins: 1100, bonus_pct: 10 },
-  { id: 'elite',    label: 'Elite',    price_eur: 25, coins: 3000, bonus_pct: 20 },
-  { id: 'legend',   label: 'Legend',   price_eur: 50, coins: 6500, bonus_pct: 30 },
+  { id: 'starter',  label: 'Starter',  coins: 500,  bonus_pct: 0  },
+  { id: 'pro',      label: 'Pro',      coins: 1100, bonus_pct: 10 },
+  { id: 'elite',    label: 'Elite',    coins: 3000, bonus_pct: 20 },
+  { id: 'legend',   label: 'Legend',   coins: 6500, bonus_pct: 30 },
 ]
 
 // GET /payments/packages — beschikbare coin-pakketten
@@ -48,7 +48,7 @@ router.post(
           data: {
             user_id:       req.user!.id,
             type:          'DEPOSIT',
-            amount:        pkg.price_eur,
+            amount:        0,
             credits_amount: pkg.coins,
             description:   `${pkg.label} pakket — ${pkg.coins} coins`,
             status:        'COMPLETED',

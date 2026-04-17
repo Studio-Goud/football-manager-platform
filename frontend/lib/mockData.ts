@@ -477,13 +477,12 @@ export const mockListings: MarketplaceListing[] = [
 // ─── Mock Transactions ─────────────────────────────────────────────────────────
 
 export const mockTransactions: Transaction[] = [
-  { id: 't1', user_id: 'user_001', type: 'deposit', amount: 50, balance_after: 97.50, created_at: '2024-06-10T14:00:00Z', reference: 'DEP-001-2024', description: 'Storting via iDEAL', status: 'completed' },
-  { id: 't2', user_id: 'user_001', type: 'entry_fee', amount: -20, balance_after: 77.50, created_at: '2024-06-10T14:05:00Z', reference: 'ENT-S38-2024', description: 'Inschrijving Seizoen 38', status: 'completed' },
-  { id: 't3', user_id: 'user_001', type: 'marketplace_purchase', amount: -16.50, balance_after: 61.00, created_at: '2024-06-12T10:30:00Z', reference: 'MKT-BUY-001', description: 'Aankoop E. Haaland', status: 'completed' },
-  { id: 't4', user_id: 'user_001', type: 'marketplace_sale', amount: 12.40, balance_after: 73.40, created_at: '2024-06-14T16:00:00Z', reference: 'MKT-SELL-001', description: 'Verkoop M. Rashford', status: 'completed' },
-  { id: 't5', user_id: 'user_001', type: 'powerup_purchase', amount: -5, balance_after: 68.40, created_at: '2024-06-15T09:00:00Z', reference: 'PWR-001', description: 'Dubbele Punten power-up', status: 'completed' },
-  { id: 't6', user_id: 'user_001', type: 'prize_payout', amount: 120, balance_after: 188.40, created_at: '2024-06-18T12:00:00Z', reference: 'PRIZE-GW37-012', description: 'Prijs GW37 - Rank #12', status: 'completed' },
-  { id: 't7', user_id: 'user_001', type: 'withdrawal', amount: -140.90, balance_after: 47.50, created_at: '2024-06-19T10:00:00Z', reference: 'WIT-001-2024', description: 'Uitbetaling naar bankrekening', status: 'completed' },
+  { id: 't1', user_id: 'user_001', type: 'deposit', amount: 1100, balance_after: 5000, created_at: '2024-06-10T14:00:00Z', reference: 'DEP-001-2024', description: 'Pro pakket — 1100 coins', status: 'completed' },
+  { id: 't2', user_id: 'user_001', type: 'marketplace_purchase', amount: -200, balance_after: 4800, created_at: '2024-06-10T14:05:00Z', reference: 'MKT-BUY-002', description: 'Aankoop L. Diaz', status: 'completed' },
+  { id: 't3', user_id: 'user_001', type: 'marketplace_purchase', amount: -165, balance_after: 4635, created_at: '2024-06-12T10:30:00Z', reference: 'MKT-BUY-001', description: 'Aankoop E. Haaland', status: 'completed' },
+  { id: 't4', user_id: 'user_001', type: 'marketplace_sale', amount: 124, balance_after: 4759, created_at: '2024-06-14T16:00:00Z', reference: 'MKT-SELL-001', description: 'Verkoop M. Rashford', status: 'completed' },
+  { id: 't5', user_id: 'user_001', type: 'powerup_purchase', amount: -50, balance_after: 4709, created_at: '2024-06-15T09:00:00Z', reference: 'PWR-001', description: 'Dubbele Punten power-up', status: 'completed' },
+  { id: 't6', user_id: 'user_001', type: 'coin_reward', amount: 200, balance_after: 4909, created_at: '2024-06-18T12:00:00Z', reference: 'REWARD-GW37-012', description: 'Coin beloning GW37 - Rank #12', status: 'completed' },
 ]
 
 // ─── Mock Power-ups ───────────────────────────────────────────────────────────

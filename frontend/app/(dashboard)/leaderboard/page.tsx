@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Trophy, ArrowUp, ArrowDown, Minus, Crown } from 'lucide-react'
+import { Trophy, ArrowUp, ArrowDown, Minus, Crown, Coins } from 'lucide-react'
 import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { useAuthStore } from '@/store/authStore'
 import { Card } from '@/components/ui/Card'
@@ -22,12 +22,12 @@ export default function LeaderboardPage() {
   const rest = entries.slice(3)
   const myEntry = entries.find(e => e.is_current_user || e.user.id === user?.id)
 
-  const prizeDistribution = [
-    { rank: '1e', pct: 30, color: '#FFD700' },
-    { rank: '2e', pct: 20, color: '#C0C0C0' },
-    { rank: '3e', pct: 12, color: '#CD7F32' },
-    { rank: '4–10', pct: 25, color: '#00FF87' },
-    { rank: '11–20%', pct: 13, color: '#3B82F6' },
+  const coinRewards = [
+    { rank: '1e', coins: 2000, pct: 30, color: '#FFD700' },
+    { rank: '2e', coins: 1000, pct: 20, color: '#C0C0C0' },
+    { rank: '3e', coins: 500,  pct: 12, color: '#CD7F32' },
+    { rank: '4–10', coins: 200, pct: 25, color: '#00FF87' },
+    { rank: '11–20%', coins: 100, pct: 13, color: '#3B82F6' },
   ]
 
   return (
@@ -36,7 +36,7 @@ export default function LeaderboardPage() {
         <div>
           <h1 className="text-2xl font-black">Ranglijst</h1>
           <p className="text-gray-400 text-sm mt-1">
-            {leaderboard?.total_participants ?? 1247} deelnemers · Prijzenpot: €{leaderboard?.prize_pool?.toLocaleString() ?? '12.480'}
+            {leaderboard?.total_participants ?? 1247} deelnemers · Top 20% wint coins
           </p>
         </div>
         <div className="flex gap-1 bg-[#0F1629] rounded-xl p-1 border border-[#1E2A45]">
@@ -54,21 +54,23 @@ export default function LeaderboardPage() {
         </div>
       </div>
 
-      {/* Prize distribution */}
+      {/* Coin rewards */}
       <Card className="p-4">
-        <h2 className="font-bold mb-3 text-sm">Prijzenverdeling (top 20% wint)</h2>
+        <h2 className="font-bold mb-3 text-sm flex items-center gap-2">
+          <Coins className="w-4 h-4 text-[#00FF87]" /> Coin beloningen (top 20% wint)
+        </h2>
         <div className="flex gap-1 h-8 rounded-lg overflow-hidden">
-          {prizeDistribution.map(({ rank, pct, color }) => (
+          {coinRewards.map(({ rank, pct, color }) => (
             <div key={rank} title={`${rank}: ${pct}%`} className="flex items-center justify-center text-xs font-bold text-[#0A0E1A]" style={{ flex: pct, background: color }}>
               {pct >= 15 && rank}
             </div>
           ))}
         </div>
         <div className="flex flex-wrap gap-3 mt-3">
-          {prizeDistribution.map(({ rank, pct, color }) => (
+          {coinRewards.map(({ rank, coins, color }) => (
             <div key={rank} className="flex items-center gap-1.5 text-xs">
               <span className="w-3 h-3 rounded-sm flex-shrink-0" style={{ background: color }} />
-              <span className="text-gray-400">{rank}: {pct}%</span>
+              <span className="text-gray-400">{rank}: {coins.toLocaleString()} coins</span>
             </div>
           ))}
         </div>
@@ -87,8 +89,8 @@ export default function LeaderboardPage() {
             <p className="text-sm text-gray-400">{myEntry.total_points} punten · {myEntry.gameweek_points} dit GW</p>
           </div>
           <div className="text-right">
-            <p className="font-bold text-[#00FF87]">€{myEntry.prize}</p>
-            <p className="text-xs text-gray-500">geschatte prijs</p>
+            <p className="font-bold text-[#00FF87]">{myEntry.prize > 0 ? `+${myEntry.prize} coins` : '—'}</p>
+            <p className="text-xs text-gray-500">seizoenbeloning</p>
           </div>
         </motion.div>
       )}
@@ -117,7 +119,7 @@ export default function LeaderboardPage() {
                   {ranks[podiumIdx] === 1 ? <Crown className="w-6 h-6" style={{ color }} /> : `#${ranks[podiumIdx]}`}
                 </span>
               </div>
-              <p className="font-bold text-sm" style={{ color }}>€{entry.prize}</p>
+              <p className="font-bold text-sm" style={{ color }}>{entry.prize > 0 ? `${entry.prize} coins` : ''}</p>
             </motion.div>
           )
         })}
@@ -192,10 +194,10 @@ export default function LeaderboardPage() {
                   <p className="text-xs text-gray-500">+{entry.gameweek_points} GW</p>
                 </div>
 
-                {/* Prize */}
+                {/* Coin reward */}
                 <div className="text-right min-w-[60px]">
                   {entry.prize > 0
-                    ? <span className="font-bold text-[#00FF87]">€{entry.prize}</span>
+                    ? <span className="font-bold text-[#00FF87] text-sm">{entry.prize}c</span>
                     : <span className="text-gray-600 text-sm">—</span>
                   }
                 </div>
