@@ -42,6 +42,7 @@ model User {
   sponsors                   UserSponsor[]
   notifications              Notification[]
   player_boosts              PlayerBoost[]
+  predictions                Prediction[]
 
   @@map("users")
 }
@@ -197,6 +198,7 @@ model Match {
   gameweek     Gameweek           @relation(fields: [gameweek_id], references: [id])
   events       MatchEvent[]
   performances MatchPerformance[]
+  predictions  Prediction[]
 
   @@map("matches")
 }
@@ -435,6 +437,24 @@ model Notification {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model Prediction {
+  id           Int      @id @default(autoincrement())
+  user_id      String
+  match_id     Int
+  home_goals   Int
+  away_goals   Int
+  top_scorer   String?
+  points       Int      @default(0)
+  scored       Boolean  @default(false)
+  created_at   DateTime @default(now())
+
+  user  User  @relation(fields: [user_id], references: [id], onDelete: Cascade)
+  match Match @relation(fields: [match_id], references: [id])
+
+  @@unique([user_id, match_id])
+  @@map("predictions")
 }
 
 model PlayerBoost {
