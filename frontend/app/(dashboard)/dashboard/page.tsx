@@ -1,7 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { Trophy, TrendingUp, Zap, ArrowUp, ArrowDown, Star, Users, Calendar, Target } from 'lucide-react'
+import { Trophy, TrendingUp, Zap, ArrowUp, ArrowDown, Star, Users, Calendar, Target, ChevronRight } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
 import { useLeaderboard } from '@/hooks/useLeaderboard'
 import { useLive } from '@/hooks/useLive'
@@ -41,6 +41,24 @@ export default function DashboardPage() {
       return res.data.data
     },
     staleTime: 300000,
+  })
+
+  interface UpcomingFixture {
+    player_id: number
+    player_name: string
+    club: string
+    position: string
+    photo_url: string | null
+    fixture: { home_team: string; away_team: string; kickoff: string; is_home: boolean } | null
+  }
+  const { data: upcomingFixtures = [] } = useQuery<UpcomingFixture[]>({
+    queryKey: ['my-upcoming-fixtures'],
+    queryFn: async () => {
+      const res = await api.get('/teams/my/upcoming-fixtures')
+      return res.data.data
+    },
+    staleTime: 300000,
+    enabled: !!team,
   })
 
   const { data: todayFixtures = [] } = useQuery({
@@ -231,6 +249,49 @@ export default function DashboardPage() {
               <Area type="monotone" dataKey="points" stroke="#00FF87" strokeWidth={2} fill="url(#pointsGradient)" dot={{ fill: '#00FF87', r: 3 }} />
             </AreaChart>
           </ResponsiveContainer>
+        </Card>
+      )}
+
+      {/* Upcoming fixtures for my players */}
+      {upcomingFixtures.length > 0 && (
+        <Card className="p-5">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="font-bold flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-[#3B82F6]" />
+              Komende Wedstrijden
+            </h2>
+            <span className="text-xs text-gray-500">Jouw spelers</span>
+          </div>
+          <div className="overflow-x-auto -mx-5 px-5">
+            <div className="flex gap-3 pb-1" style={{ minWidth: 'max-content' }}>
+              {upcomingFixtures.filter(f => f.fixture).map(f => {
+                const fixture = f.fixture!
+                const opponent = fixture.is_home ? fixture.away_team : fixture.home_team
+                const kickoff = new Date(fixture.kickoff)
+                const posColor = f.position === 'GK' ? '#9B59B6' : f.position === 'DEF' ? '#3B82F6' : f.position === 'MID' ? '#00FF87' : '#F59E0B'
+                return (
+                  <div key={f.player_id} className="flex-shrink-0 bg-[#0A0E1A] border border-[#1E2A45] rounded-xl p-3 w-36 text-center">
+                    <div className="w-10 h-10 rounded-full bg-[#1E2A45] flex items-center justify-center overflow-hidden mx-auto mb-2">
+                      {f.photo_url
+                        ? <img src={f.photo_url} alt={f.player_name} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        : <span className="text-xs font-black" style={{ color: posColor }}>{f.position}</span>
+                      }
+                    </div>
+                    <p className="text-xs font-bold truncate">{f.player_name?.split(' ').pop()}</p>
+                    <p className="text-[10px] text-gray-500 mb-2">{f.club}</p>
+                    <div className="bg-[#1E2A45] rounded-lg px-2 py-1.5">
+                      <p className="text-[10px] font-black">
+                        {fixture.is_home ? '🏠' : '✈️'} {opponent.length > 10 ? opponent.slice(0, 8) + '…' : opponent}
+                      </p>
+                      <p className="text-[9px] text-gray-500 mt-0.5">
+                        {kickoff.toLocaleDateString('nl-NL', { day: 'numeric', month: 'short' })}
+                      </p>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          </div>
         </Card>
       )}
 

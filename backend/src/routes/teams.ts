@@ -496,4 +496,57 @@ router.get('/my/transfers', authenticate, async (req: AuthRequest, res: Response
   }
 })
 
+// GET /teams/my/upcoming-fixtures — next match for each club in user's team
+router.get('/my/upcoming-fixtures', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const team = await prisma.team.findFirst({
+      where: { user_id: req.user!.id, ...(currentSeason ? { season_id: currentSeason.id } : {}) },
+      include: { players: { include: { player: { select: { id: true, name: true, club: true, position: true, photo_url: true } } } } },
+      orderBy: { created_at: 'desc' },
+    })
+
+    if (!team) { sendError(res, 'Geen team', 404); return }
+
+    // Get unique clubs
+    const clubs = [...new Set(team.players.map(tp => tp.player?.club).filter(Boolean))] as string[]
+
+    // Find upcoming matches for each club
+    const fixtures: Record<string, { home_team: string; away_team: string; kickoff: string; is_home: boolean }> = {}
+    for (const club of clubs) {
+      const match = await prisma.match.findFirst({
+        where: {
+          OR: [{ home_team: club }, { away_team: club }],
+          status: 'SCHEDULED',
+          kickoff: { gte: new Date() },
+        },
+        orderBy: { kickoff: 'asc' },
+      })
+      if (match) {
+        fixtures[club] = {
+          home_team: match.home_team,
+          away_team: match.away_team,
+          kickoff: match.kickoff.toISOString(),
+          is_home: match.home_team === club,
+        }
+      }
+    }
+
+    const result = team.players
+      .filter(tp => !tp.slot_position.startsWith('BENCH'))
+      .map(tp => ({
+        player_id: tp.player_id,
+        player_name: tp.player?.name,
+        club: tp.player?.club,
+        position: tp.player?.position,
+        photo_url: tp.player?.photo_url,
+        fixture: tp.player?.club ? fixtures[tp.player.club] ?? null : null,
+      }))
+
+    sendSuccess(res, result)
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 export default router
