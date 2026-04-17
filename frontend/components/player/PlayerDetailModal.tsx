@@ -3,6 +3,7 @@
 import { motion, AnimatePresence } from 'framer-motion'
 import { X, TrendingUp, TrendingDown, Minus, ShieldCheck, Zap, Target } from 'lucide-react'
 import { Player } from '@/types'
+import { AreaChart, Area, Tooltip, ResponsiveContainer } from 'recharts'
 
 interface PlayerDetailModalProps {
   player: Player | null
@@ -179,6 +180,28 @@ export function PlayerDetailModal({ player, onClose, onAddToTeam, showAddButton 
           <div className="overflow-y-auto max-h-[50vh] p-5 space-y-5">
             {/* Form chart */}
             <MiniFormBar values={formHistory} />
+
+            {/* Price history chart */}
+            {player.price_history && player.price_history.length > 1 && (
+              <div>
+                <p className="text-xs text-gray-400 mb-2">Prijsgeschiedenis</p>
+                <ResponsiveContainer width="100%" height={60}>
+                  <AreaChart data={[...player.price_history].reverse()} margin={{ top: 2, right: 2, left: -30, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="priceGrad" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
+                        <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
+                      </linearGradient>
+                    </defs>
+                    <Tooltip
+                      contentStyle={{ background: '#0F1629', border: '1px solid #1E2A45', borderRadius: '6px', fontSize: '11px' }}
+                      formatter={(v: number) => [`${v.toFixed(1)} cr`, 'Prijs']}
+                    />
+                    <Area type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={1.5} fill="url(#priceGrad)" dot={false} />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            )}
 
             {/* Stats */}
             <div>
