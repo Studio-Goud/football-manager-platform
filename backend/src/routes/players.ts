@@ -147,4 +147,42 @@ router.get('/:id', authenticate, async (req: Request, res: Response): Promise<vo
   }
 })
 
+// GET /players/ownership — top 20 most owned players + total teams count
+router.get('/ownership', authenticate, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const [totalTeams, topOwned] = await Promise.all([
+      prisma.team.count(),
+      prisma.teamPlayer.groupBy({
+        by: ['player_id'],
+        _count: { player_id: true },
+        orderBy: { _count: { player_id: 'desc' } },
+        take: 20,
+      }),
+    ])
+
+    if (totalTeams === 0) {
+      sendSuccess(res, { total_teams: 0, top_owned: [] })
+      return
+    }
+
+    const playerIds = topOwned.map(r => r.player_id)
+    const players = await prisma.player.findMany({
+      where: { id: { in: playerIds } },
+      select: { id: true, name: true, display_name: true, position: true, club: true, price: true, photo_url: true },
+    })
+    const playerMap = new Map(players.map(p => [p.id, p]))
+
+    sendSuccess(res, {
+      total_teams: totalTeams,
+      top_owned: topOwned.map(r => ({
+        player: playerMap.get(r.player_id),
+        count: r._count.player_id,
+        ownership_pct: Math.round((r._count.player_id / totalTeams) * 100),
+      })).filter(r => r.player),
+    })
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 export default router

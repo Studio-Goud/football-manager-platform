@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { Telescope, Flame, TrendingUp, Star } from 'lucide-react'
+import { Telescope, Flame, TrendingUp, Star, Users } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { PlayerCompareModal } from '@/components/player/PlayerCompareModal'
@@ -103,6 +103,15 @@ export default function ScoutPage() {
       return res.data.data as ValuePlayer[]
     },
     staleTime: 60000,
+  })
+
+  const { data: ownership } = useQuery<{ total_teams: number; top_owned: Array<{ player: ValuePlayer; count: number; ownership_pct: number }> }>({
+    queryKey: ['player-ownership'],
+    queryFn: async () => {
+      const res = await api.get('/players/ownership')
+      return res.data.data
+    },
+    staleTime: 300000,
   })
 
   const positions: Position[] = ['GK', 'DEF', 'MID', 'FWD']
@@ -210,6 +219,45 @@ export default function ScoutPage() {
           </p>
         </div>
       </Card>
+
+      {/* Ownership widget */}
+      {ownership && ownership.top_owned.length > 0 && (
+        <Card className="p-5">
+          <h2 className="font-bold mb-4 flex items-center gap-2">
+            <Users className="w-5 h-5 text-blue-400" />
+            Populairst bezit
+            <span className="text-xs text-gray-500 font-normal ml-1">% van alle managers</span>
+          </h2>
+          <div className="space-y-3">
+            {ownership.top_owned.slice(0, 8).map((row, i) => (
+              <motion.div
+                key={row.player.id}
+                initial={{ opacity: 0, x: -8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.04 }}
+                className="flex items-center gap-3"
+              >
+                <span className="text-xs text-gray-600 w-4 text-right flex-shrink-0">{i + 1}</span>
+                <div className="w-8 h-8 rounded-full bg-[#1E2A45] overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  {row.player.photo_url
+                    ? <img src={row.player.photo_url} alt={row.player.name} className="w-full h-full object-cover" />
+                    : <span className="text-xs font-bold text-gray-400">{row.player.name[0]}</span>
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-1">
+                    <span className="text-sm font-semibold truncate">{row.player.display_name ?? row.player.name}</span>
+                    <span className="text-xs font-black text-blue-400 flex-shrink-0 ml-2">{row.ownership_pct}%</span>
+                  </div>
+                  <div className="h-1.5 bg-[#1E2A45] rounded-full overflow-hidden">
+                    <div className="h-full bg-blue-400 rounded-full" style={{ width: `${row.ownership_pct}%` }} />
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {comparePlayer && (
         <PlayerCompareModal
