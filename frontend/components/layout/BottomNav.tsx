@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingCart, Telescope, User, LayoutDashboard, Grid, Trophy, Swords, Globe, Radio, Zap, X } from 'lucide-react'
+import { Users, ShoppingCart, Telescope, User, LayoutDashboard, Grid, Trophy, Swords, Globe, Radio, Zap, X, Award } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { useState } from 'react'
@@ -24,6 +24,7 @@ const moreNav = [
   { label: 'Duels',        href: '/duels',       icon: Swords },
   { label: 'Competities',  href: '/leagues',     icon: Globe },
   { label: 'Power-ups',    href: '/powerups',    icon: Zap },
+  { label: 'Sponsors',     href: '/sponsors',    icon: Award },
 ]
 
 export function BottomNav() {

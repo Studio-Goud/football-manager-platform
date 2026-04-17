@@ -25,6 +25,7 @@ import duelRoutes from './routes/duels'
 import leagueRoutes from './routes/leagues'
 import achievementRoutes from './routes/achievements'
 import challengeRoutes from './routes/challenges'
+import sponsorRoutes from './routes/sponsors'
 
 import { fetchLiveMatches, fetchMatchEvents, mapApiEventToScoring, updatePlayerPrices } from './services/footballApiService'
 import { calculateTeamGameweekPoints, SCORING } from './services/scoringService'
@@ -111,6 +112,7 @@ app.use('/api/duels', duelRoutes)
 app.use('/api/leagues', leagueRoutes)
 app.use('/api/achievements', achievementRoutes)
 app.use('/api/challenges', challengeRoutes)
+app.use('/api/sponsors', sponsorRoutes)
 
 app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', timestamp: new Date().toISOString() })
@@ -296,6 +298,26 @@ cron.schedule('0 * * * *', async () => {
     }
   } catch (err) {
     logger.error('Auction processor error', { err })
+  }
+})
+
+// Every Monday 08:00: sponsor payouts
+cron.schedule('0 8 * * 1', async () => {
+  try {
+    const activeSponsors = await prisma.userSponsor.findMany({
+      where: { active: true },
+      include: { sponsor: true },
+    })
+    for (const us of activeSponsors) {
+      const income = Number(us.sponsor.weekly_income)
+      await prisma.user.update({ where: { id: us.user_id }, data: { balance_credits: { increment: income } } })
+      await prisma.transaction.create({
+        data: { user_id: us.user_id, type: 'sponsor_income', amount: income, credits_amount: income, status: 'COMPLETED', description: `Wekelijks inkomen van sponsor ${us.sponsor.name}` },
+      })
+    }
+    logger.info(`Sponsor payouts: ${activeSponsors.length} users paid`)
+  } catch (err) {
+    logger.error('Sponsor payout error', { err })
   }
 })
 

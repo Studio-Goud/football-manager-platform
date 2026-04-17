@@ -39,6 +39,7 @@ model User {
   duels_as_opponent    Duel[]                @relation("DuelOpponent")
   private_league_memberships PrivateLeagueMember[]
   league_messages            LeagueMessage[]
+  sponsors                   UserSponsor[]
 
   @@map("users")
 }
@@ -418,6 +419,35 @@ model LeagueMessage {
   user           User          @relation(fields: [user_id], references: [id])
 
   @@map("league_messages")
+}
+
+model Sponsor {
+  id            Int    @id @default(autoincrement())
+  name          String
+  logo          String
+  weekly_income Int
+  requirement   String
+  tier          String
+  description   String
+  is_active     Boolean @default(true)
+
+  user_sponsors UserSponsor[]
+
+  @@map("sponsors")
+}
+
+model UserSponsor {
+  id          Int      @id @default(autoincrement())
+  user_id     String
+  sponsor_id  Int
+  started_at  DateTime @default(now())
+  active      Boolean  @default(true)
+
+  user    User    @relation(fields: [user_id], references: [id])
+  sponsor Sponsor @relation(fields: [sponsor_id], references: [id])
+
+  @@unique([user_id, sponsor_id])
+  @@map("user_sponsors")
 }
 
 model ResponsibleGaming {
