@@ -41,6 +41,7 @@ model User {
   league_messages            LeagueMessage[]
   sponsors                   UserSponsor[]
   notifications              Notification[]
+  player_boosts              PlayerBoost[]
 
   @@map("users")
 }
@@ -434,6 +435,20 @@ model Notification {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model PlayerBoost {
+  id          Int      @id @default(autoincrement())
+  user_id     String
+  player_id   Int
+  gameweek_id Int?
+  type        String   @default("DOUBLE_POINTS")
+  active      Boolean  @default(true)
+  used_at     DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@map("player_boosts")
 }
 
 model Sponsor {

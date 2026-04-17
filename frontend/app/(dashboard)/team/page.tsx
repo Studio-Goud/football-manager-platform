@@ -327,6 +327,21 @@ export default function TeamPage() {
                       {selectedPlayer.is_vice_captain ? '✓ Vice-aanvoerder (VC)' : '🥈 Maak vice-aanvoerder (x1.5)'}
                     </Button>
                     <button
+                      onClick={async () => {
+                        if (!selectedPlayer.player?.id) return
+                        try {
+                          await api.post('/powerups/boosts', { player_id: selectedPlayer.player.id })
+                          toast.success(`⚡ Boost actief voor ${selectedPlayer.player.name}!`)
+                        } catch (e: unknown) {
+                          const msg = (e as { response?: { data?: { message?: string } } })?.response?.data?.message
+                          toast.error(msg ?? 'Boost mislukt')
+                        }
+                      }}
+                      className="w-full border border-[#FFD700]/30 text-[#FFD700] py-2 rounded-xl text-sm hover:bg-[#FFD700]/10 transition-colors"
+                    >
+                      ⚡ Player Boost (50 coins · 2× punten)
+                    </button>
+                    <button
                       onClick={() => handleRemovePlayer(selectedPlayer)}
                       className="w-full border border-red-500/30 text-red-400 py-2 rounded-xl text-sm hover:bg-red-500/10 transition-colors"
                     >
