@@ -587,6 +587,44 @@ router.get('/my/value', authenticate, async (req: AuthRequest, res: Response): P
   }
 })
 
+// GET /teams/gameweek-winners — top scorer per gameweek (Hall of Fame)
+router.get('/gameweek-winners', authenticate, async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    // Get all finished gameweeks
+    const gameweeks = await prisma.gameweek.findMany({
+      where: { status: 'FINISHED' },
+      orderBy: { number: 'desc' },
+      take: 10,
+    })
+
+    const winners = []
+    for (const gw of gameweeks) {
+      const topTeamGw = await prisma.teamGameweek.findFirst({
+        where: { gameweek_id: gw.id },
+        orderBy: { points: 'desc' },
+        include: {
+          team: {
+            include: { user: { select: { username: true, tier: true } } },
+          },
+        },
+      })
+      if (topTeamGw) {
+        winners.push({
+          gameweek: gw.number,
+          username: topTeamGw.team?.user?.username ?? 'Onbekend',
+          team_name: topTeamGw.team?.name ?? '—',
+          tier: topTeamGw.team?.user?.tier ?? 'bronze',
+          points: Number(topTeamGw.points),
+        })
+      }
+    }
+
+    sendSuccess(res, winners)
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 // GET /teams/my/upcoming-fixtures — next match for each club in user's team
 router.get('/my/upcoming-fixtures', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {

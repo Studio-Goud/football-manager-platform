@@ -53,6 +53,22 @@ export default function LeaderboardPage() {
     staleTime: 300000,
   })
 
+  interface GwWinner {
+    gameweek: number
+    username: string
+    team_name: string
+    tier: string
+    points: number
+  }
+  const { data: gwWinners = [] } = useQuery<GwWinner[]>({
+    queryKey: ['gw-winners'],
+    queryFn: async () => {
+      const res = await api.get('/teams/gameweek-winners')
+      return res.data.data
+    },
+    staleTime: 600000,
+  })
+
   const allEntries = leaderboard?.entries ?? []
   const entries = viewMode === 'gameweek'
     ? [...allEntries].sort((a, b) => (b.gameweek_points ?? 0) - (a.gameweek_points ?? 0)).map((e, i) => ({ ...e, rank: i + 1 }))
@@ -290,6 +306,30 @@ export default function LeaderboardPage() {
         </div>
         )}
       </Card>
+
+      {/* Hall of Fame */}
+      {gwWinners.length > 0 && (
+        <Card className="p-4">
+          <h2 className="font-bold mb-3 text-sm flex items-center gap-2">
+            <Crown className="w-4 h-4 text-[#FFD700]" /> Hall of Fame
+          </h2>
+          <div className="space-y-2">
+            {gwWinners.map(w => (
+              <div key={w.gameweek} className="flex items-center gap-3 py-1.5">
+                <span className="text-xs font-black text-gray-500 w-10 flex-shrink-0">GW{w.gameweek}</span>
+                <div className="w-7 h-7 rounded-full bg-[#FFD700]/20 flex items-center justify-center flex-shrink-0">
+                  <Crown className="w-3.5 h-3.5 text-[#FFD700]" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-bold truncate">{w.username}</p>
+                  <p className="text-[10px] text-gray-500 truncate">{w.team_name}</p>
+                </div>
+                <span className="text-sm font-black text-[#FFD700] flex-shrink-0">{w.points} pt</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
     </div>
   )
 }
