@@ -86,12 +86,25 @@ export function useLive() {
       window.dispatchEvent(new CustomEvent('sim-new-gw', { detail: data }))
     })
 
+    socket.on('user:challenge', (...args: unknown[]) => {
+      const data = args[0] as { duel_id: string; challenger_username: string; stake: number; message?: string }
+      const stakeText = data.stake > 0 ? ` (${data.stake} coins)` : ''
+      toast(`⚔️ ${data.challenger_username} daagt je uit!${stakeText}`, {
+        duration: 8000,
+        style: { background: '#111827', border: '1px solid #3B82F6', borderRadius: '12px', color: '#fff', fontSize: '14px' },
+        icon: '⚔️',
+      })
+      // Refresh pending count badge
+      window.dispatchEvent(new CustomEvent('duel:challenge-received'))
+    })
+
     return () => {
       socket.off('match:event')
       socket.off('match:score')
       socket.off('user:points')
       socket.off('gameweek:tick')
       socket.off('gameweek:new')
+      socket.off('user:challenge')
     }
   }, [addEvent, updateMatchScore, setLivePoints])
 

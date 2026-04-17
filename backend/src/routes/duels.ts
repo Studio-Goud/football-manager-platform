@@ -4,6 +4,7 @@ import prisma from '../config/database'
 import { sendSuccess, sendError } from '../utils/apiResponse'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { calculatePlayerPoints, TACTIC_MULTIPLIERS, TacticStyle } from '../services/scoringService'
+import { io } from '../index'
 
 const router = Router()
 
@@ -168,6 +169,14 @@ router.post(
           opponent:   { select: { id: true, username: true, tier: true } },
           gameweek:   { select: { id: true, number: true, status: true } },
         },
+      })
+
+      // Notify opponent via socket
+      io.to(`user:${opponent.id}`).emit('user:challenge', {
+        duel_id: duel.id,
+        challenger_username: duel.challenger.username,
+        stake,
+        message: message ?? null,
       })
 
       sendSuccess(res, formatDuel(duel, req.user!.id), 'Uitdaging verstuurd!', 201)
