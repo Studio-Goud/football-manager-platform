@@ -2,10 +2,11 @@
 
 import { useQuery } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
-import { Radio, Clock } from 'lucide-react'
+import { Radio, Clock, Zap } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import api from '@/lib/api'
+import { useAuthStore } from '@/store/authStore'
 
 interface Fixture {
   fixture_id: number
@@ -123,6 +124,94 @@ function groupByLeague(matches: Fixture[]) {
   })
 }
 
+interface MatchPerf {
+  id: number
+  goals: number
+  assists: number
+  yellow_cards: number
+  red_cards: number
+  minutes_played: number
+  total_points: number
+  is_captain: boolean
+  is_vice_captain: boolean
+  player: { id: number; name: string; display_name: string | null; position: string; club: string; photo_url: string | null }
+  match: { home_team: string; away_team: string; home_score: number | null; away_score: number | null; status: string }
+}
+
+function MyPlayersWidget() {
+  const { isAuthenticated } = useAuthStore()
+  const { data: perfs = [], isLoading } = useQuery<MatchPerf[]>({
+    queryKey: ['my-match-perfs'],
+    queryFn: async () => {
+      const res = await api.get('/teams/my/match-performances')
+      return res.data.data
+    },
+    enabled: isAuthenticated,
+    staleTime: 60000,
+    refetchInterval: 60000,
+  })
+
+  if (!isAuthenticated || (perfs.length === 0 && !isLoading)) return null
+
+  const recentMatchId = perfs[0]?.match
+  if (!recentMatchId) return null
+
+  // Get unique players from most recent match data
+  const playerMap = new Map<number, MatchPerf>()
+  for (const p of perfs) {
+    if (!playerMap.has(p.player.id)) playerMap.set(p.player.id, p)
+  }
+  const players = Array.from(playerMap.values()).slice(0, 11)
+
+  return (
+    <Card className="p-5 border border-[#00FF87]/10">
+      <div className="flex items-center gap-2 mb-4">
+        <Zap className="w-4 h-4 text-[#00FF87]" />
+        <h2 className="font-bold text-sm">Mijn Spelers (laatste data)</h2>
+        <span className="text-xs text-gray-500 ml-auto">{players.length} spelers</span>
+      </div>
+      {isLoading ? (
+        <div className="flex gap-2 overflow-x-auto">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="w-16 h-20 flex-shrink-0 rounded-xl" />)}
+        </div>
+      ) : (
+        <div className="flex gap-2 overflow-x-auto pb-1">
+          {players.map((p, i) => (
+            <motion.div
+              key={p.id}
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: i * 0.04 }}
+              className="flex-shrink-0 w-18 flex flex-col items-center gap-1 bg-[#0A0E1A] rounded-xl p-2.5 min-w-[68px]"
+            >
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-[#1E2A45] overflow-hidden flex items-center justify-center">
+                  {p.player.photo_url
+                    ? <img src={p.player.photo_url} alt={p.player.name} className="w-full h-full object-cover" />
+                    : <span className="text-sm font-bold text-gray-400">{p.player.name[0]}</span>
+                  }
+                </div>
+                {p.is_captain && <span className="absolute -top-1 -right-1 text-[9px] bg-[#FFD700] text-black font-black rounded-full w-4 h-4 flex items-center justify-center">C</span>}
+                {p.is_vice_captain && <span className="absolute -top-1 -right-1 text-[9px] bg-blue-400 text-black font-black rounded-full w-4 h-4 flex items-center justify-center">V</span>}
+              </div>
+              <p className="text-[10px] font-semibold text-center truncate w-full">{p.player.display_name ?? p.player.name.split(' ').pop()}</p>
+              <p className={`text-xs font-black ${p.total_points > 0 ? 'text-[#00FF87]' : 'text-gray-500'}`}>
+                {p.total_points > 0 ? `+${p.total_points}` : '0'} pt
+              </p>
+              <div className="flex gap-0.5 text-[9px]">
+                {p.goals > 0 && <span>⚽{p.goals}</span>}
+                {p.assists > 0 && <span>🅰️{p.assists}</span>}
+                {p.yellow_cards > 0 && <span>🟨</span>}
+                {p.red_cards > 0 && <span>🟥</span>}
+              </div>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </Card>
+  )
+}
+
 export default function LivePage() {
   const { data: liveMatches = [], isLoading: loadingLive } = useQuery({
     queryKey: ['live-matches'],
@@ -159,6 +248,9 @@ export default function LivePage() {
           </p>
         </div>
       </div>
+
+      {/* My players widget */}
+      <MyPlayersWidget />
 
       {/* Live nu */}
       <section>

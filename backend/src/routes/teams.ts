@@ -304,6 +304,45 @@ router.get('/leaderboard', authenticate, async (req: AuthRequest, res: Response)
   }
 })
 
+// GET /teams/my/match-performances — recent match data for team players
+router.get('/my/match-performances', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const team = await prisma.team.findFirst({
+      where: { user_id: req.user!.id, ...(currentSeason ? { season_id: currentSeason.id } : {}) },
+      include: { players: { select: { player_id: true, is_captain: true, is_vice_captain: true } } },
+      orderBy: { created_at: 'desc' },
+    })
+    if (!team) {
+      sendSuccess(res, [])
+      return
+    }
+
+    const playerIds = team.players.map(p => p.player_id)
+    const captainId = team.players.find(p => p.is_captain)?.player_id
+    const vcId = team.players.find(p => p.is_vice_captain)?.player_id
+
+    const performances = await prisma.matchPerformance.findMany({
+      where: { player_id: { in: playerIds } },
+      include: {
+        match: { select: { id: true, home_team: true, away_team: true, home_score: true, away_score: true, status: true } },
+        player: { select: { id: true, name: true, display_name: true, position: true, club: true, photo_url: true } },
+      },
+      orderBy: { match_id: 'desc' },
+      take: 50,
+    })
+
+    sendSuccess(res, performances.map(p => ({
+      ...p,
+      is_captain: p.player_id === captainId,
+      is_vice_captain: p.player_id === vcId,
+      total_points: Number(p.total_points),
+    })))
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 // GET /teams/my/points-history — last 10 gameweek scores
 router.get('/my/points-history', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
