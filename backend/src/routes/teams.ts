@@ -6,6 +6,7 @@ import { authenticate, AuthRequest } from '../middleware/auth'
 import { calculateTeamGameweekPoints, calculateLeaderboard, calculatePrizeDistribution, TACTIC_META, TacticStyle } from '../services/scoringService'
 import { getTacticImpact } from '../services/tacticImpactService'
 import { generateScoutReport } from '../services/scoutService'
+import { generateManagerBriefing } from '../services/managerBriefingService'
 
 const router = Router()
 
@@ -463,6 +464,17 @@ router.get('/my/round-report', authenticate, async (req: AuthRequest, res: Respo
     })
   } catch {
     sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// GET /teams/my/manager-briefing — AI wekelijkse manager briefing
+router.get('/my/manager-briefing', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const briefing = await generateManagerBriefing(req.user!.id)
+    if (!briefing) { sendError(res, 'Geen team of generatie mislukt', 404); return }
+    sendSuccess(res, briefing)
+  } catch {
+    sendError(res, 'Briefing genereren mislukt', 500)
   }
 })
 

@@ -1,9 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
-import { Telescope, Flame, TrendingUp, Star, Users } from 'lucide-react'
+import { Telescope, Flame, TrendingUp, Star, Users, Brain, AlertTriangle, CheckCircle, ArrowRightLeft, Target } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Skeleton } from '@/components/ui/Skeleton'
 import { ErrorState } from '@/components/ui/ErrorState'
@@ -115,6 +115,30 @@ export default function ScoutPage() {
     staleTime: 300000,
   })
 
+  interface Briefing {
+    biggest_risk: { player: string; reason: string }
+    best_chance: { player: string; reason: string }
+    transfer_advice: { sell: string; buy: string; reason: string }
+    tactic_advice: string
+    generated_at: string
+  }
+
+  const [briefingEnabled, setBriefingEnabled] = useState(false)
+  const { data: briefing, isLoading: briefingLoading, refetch: fetchBriefing } = useQuery<Briefing | null>({
+    queryKey: ['manager-briefing'],
+    queryFn: async () => {
+      const res = await api.get('/teams/my/manager-briefing')
+      return res.data.data as Briefing
+    },
+    enabled: briefingEnabled,
+    staleTime: 3600000,
+  })
+
+  const handleBriefing = useCallback(() => {
+    if (!briefingEnabled) setBriefingEnabled(true)
+    else fetchBriefing()
+  }, [briefingEnabled, fetchBriefing])
+
   const positions: Position[] = ['GK', 'DEF', 'MID', 'FWD']
   const activePlayers = bestValue?.[activePos] ?? []
 
@@ -127,6 +151,73 @@ export default function ScoutPage() {
         </h1>
         <p className="text-gray-400 text-sm mt-1">Beste waarde spelers per positie + topvorm picks</p>
       </div>
+
+      {/* AI Manager Briefing */}
+      <Card className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-bold flex items-center gap-2">
+            <Brain className="w-5 h-5 text-[#9B59B6]" />
+            AI Manager Briefing
+          </h2>
+          {!briefing && (
+            <button
+              onClick={handleBriefing}
+              disabled={briefingLoading}
+              className="px-4 py-2 bg-[#9B59B6]/20 border border-[#9B59B6]/40 text-[#9B59B6] text-xs font-bold rounded-xl hover:bg-[#9B59B6]/30 transition-colors disabled:opacity-50"
+            >
+              {briefingLoading ? 'Analyseren...' : 'Genereer briefing'}
+            </button>
+          )}
+        </div>
+
+        {briefingLoading ? (
+          <div className="space-y-3">
+            {[1,2,3].map(i => <div key={i} className="h-14 bg-[#1E2A45] rounded-xl animate-pulse" />)}
+          </div>
+        ) : briefing ? (
+          <div className="space-y-3">
+            <div className="flex gap-3 bg-red-500/10 border border-red-500/20 rounded-xl p-3">
+              <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-red-400 font-bold">Grootste risico</p>
+                <p className="text-sm font-semibold">{briefing.biggest_risk.player}</p>
+                <p className="text-xs text-gray-400">{briefing.biggest_risk.reason}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 bg-[#00FF87]/10 border border-[#00FF87]/20 rounded-xl p-3">
+              <CheckCircle className="w-4 h-4 text-[#00FF87] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-[#00FF87] font-bold">Beste kans</p>
+                <p className="text-sm font-semibold">{briefing.best_chance.player}</p>
+                <p className="text-xs text-gray-400">{briefing.best_chance.reason}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 bg-[#3B82F6]/10 border border-[#3B82F6]/20 rounded-xl p-3">
+              <ArrowRightLeft className="w-4 h-4 text-[#3B82F6] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-[#3B82F6] font-bold">Transfer tip</p>
+                <p className="text-sm font-semibold">{briefing.transfer_advice.sell} → {briefing.transfer_advice.buy}</p>
+                <p className="text-xs text-gray-400">{briefing.transfer_advice.reason}</p>
+              </div>
+            </div>
+            <div className="flex gap-3 bg-[#FFD700]/10 border border-[#FFD700]/20 rounded-xl p-3">
+              <Target className="w-4 h-4 text-[#FFD700] flex-shrink-0 mt-0.5" />
+              <div>
+                <p className="text-xs text-[#FFD700] font-bold">Tactiekadvies</p>
+                <p className="text-sm text-gray-300">{briefing.tactic_advice}</p>
+              </div>
+            </div>
+            <button
+              onClick={() => fetchBriefing()}
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors w-full text-center py-1"
+            >
+              Vernieuwen
+            </button>
+          </div>
+        ) : (
+          <p className="text-sm text-gray-500 text-center py-4">Klik op "Genereer briefing" voor een persoonlijke AI analyse van jouw team.</p>
+        )}
+      </Card>
 
       {/* Hot this week */}
       <Card className="p-5">
