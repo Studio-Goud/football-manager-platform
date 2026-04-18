@@ -1,13 +1,17 @@
 import prisma from '../config/database'
+import { sendPushToUser } from './pushService'
 
 export async function createNotification(
   userId: string,
   type: string,
   title: string,
   body: string,
+  url = '/dashboard',
 ): Promise<void> {
   try {
     await prisma.notification.create({ data: { user_id: userId, type, title, body } })
+    // Fire push notification in background (non-blocking)
+    sendPushToUser(userId, title, body, url).catch(() => {})
   } catch {
     // Non-critical — don't throw
   }

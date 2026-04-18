@@ -43,6 +43,7 @@ model User {
   notifications              Notification[]
   player_boosts              PlayerBoost[]
   predictions                Prediction[]
+  push_subscriptions         PushSubscription[]
 
   @@map("users")
 }
@@ -437,6 +438,19 @@ model Notification {
   user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+model PushSubscription {
+  id         Int      @id @default(autoincrement())
+  user_id    String
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  created_at DateTime @default(now())
+
+  user User @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@map("push_subscriptions")
 }
 
 model Prediction {
