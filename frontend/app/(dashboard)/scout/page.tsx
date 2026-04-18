@@ -115,6 +115,16 @@ export default function ScoutPage() {
     staleTime: 300000,
   })
 
+  interface DifferentialPlayer extends ValuePlayer { ownership_pct: number }
+  const { data: differentials = [] } = useQuery<DifferentialPlayer[]>({
+    queryKey: ['differentials'],
+    queryFn: async () => {
+      const res = await api.get('/players/differentials')
+      return res.data.data ?? []
+    },
+    staleTime: 300000,
+  })
+
   interface Briefing {
     biggest_risk: { player: string; reason: string }
     best_chance: { player: string; reason: string }
@@ -313,6 +323,44 @@ export default function ScoutPage() {
           </p>
         </div>
       </Card>
+
+      {/* Differential picks */}
+      {differentials.length > 0 && (
+        <Card className="p-5">
+          <h2 className="font-bold mb-1 flex items-center gap-2">
+            <span className="text-lg">💎</span>
+            Differentiaal picks
+          </h2>
+          <p className="text-xs text-gray-500 mb-4">Hoge form, laag bezit — onder de radar spelers</p>
+          <div className="space-y-2">
+            {differentials.slice(0, 6).map((p, i) => (
+              <motion.div
+                key={p.id}
+                initial={{ opacity: 0, y: 6 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-center gap-3 bg-[#0A0E1A] rounded-xl p-3 hover:bg-[#111827] transition-colors cursor-pointer"
+                onClick={() => setComparePlayer(p as unknown as Player)}
+              >
+                <div className="w-9 h-9 rounded-full bg-[#1E2A45] overflow-hidden flex-shrink-0 flex items-center justify-center">
+                  {p.photo_url
+                    ? <img src={p.photo_url} alt={p.name} className="w-full h-full object-cover" />
+                    : <span className="text-xs font-bold text-gray-400">{p.name[0]}</span>
+                  }
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate">{p.display_name ?? p.name}</p>
+                  <p className="text-xs text-gray-500">{p.club} · {p.position} · {p.price.toFixed(1)} cr</p>
+                </div>
+                <div className="text-right flex-shrink-0 space-y-0.5">
+                  <p className="text-xs font-black text-orange-400">🔥 {p.form.toFixed(1)}</p>
+                  <p className="text-[10px] text-gray-600">{p.ownership_pct}% bezit</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       {/* Ownership widget */}
       {ownership && ownership.top_owned.length > 0 && (

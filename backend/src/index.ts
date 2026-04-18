@@ -354,6 +354,37 @@ cron.schedule('0 * * * *', async () => {
   }
 })
 
+// Every 6 hours: check for significant form drops → notify team owners
+cron.schedule('0 */6 * * *', async () => {
+  try {
+    const lowFormThreshold = 4
+    // Find players with form <= 4 who are in teams as starters
+    const tps = await prisma.teamPlayer.findMany({
+      where: {
+        slot_position: { not: { startsWith: 'BENCH' } },
+        player: { form: { lte: lowFormThreshold } },
+      },
+      include: {
+        player: { select: { id: true, name: true, form: true } },
+        team: { select: { user_id: true } },
+      },
+      distinct: ['player_id', 'team_id'],
+    })
+    for (const tp of tps) {
+      if (!tp.team.user_id) continue
+      await createNotification(
+        tp.team.user_id, 'VALUE_CHANGE',
+        `${tp.player.name} heeft lage vorm`,
+        `${tp.player.name} heeft momenteel een form van ${Number(tp.player.form).toFixed(1)}. Overweeg een vervanging.`,
+        '/scout'
+      )
+    }
+    if (tps.length > 0) logger.info(`Form drop alerts sent for ${tps.length} team-player combos`)
+  } catch (err) {
+    logger.error('Form drop cron error', { err })
+  }
+})
+
 // Daily at midnight: check for ended seasons and issue rewards
 cron.schedule('0 0 * * *', async () => {
   try {

@@ -233,4 +233,39 @@ router.get('/top-scorers', authenticate, async (_req: Request, res: Response): P
   }
 })
 
+// GET /players/differentials — laag bezit, hoge form (verborgen pareltjes)
+router.get('/differentials', authenticate, async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const totalTeams = await prisma.team.count()
+    if (totalTeams === 0) { sendSuccess(res, []); return }
+
+    // Find players owned by fewer than 15% of teams but with form >= 6
+    const ownedCounts = await prisma.teamPlayer.groupBy({
+      by: ['player_id'],
+      _count: { player_id: true },
+    })
+    const ownedMap = new Map(ownedCounts.map(r => [r.player_id, r._count.player_id]))
+
+    const highFormPlayers = await prisma.player.findMany({
+      where: { form: { gte: 6 } },
+      orderBy: { form: 'desc' },
+      take: 100,
+    })
+
+    const differentials = highFormPlayers
+      .map(p => {
+        const owned = ownedMap.get(p.id) ?? 0
+        const ownershipPct = Math.round((owned / totalTeams) * 100)
+        return { ...p, ownership_pct: ownershipPct, price: Number(p.price), form: Number(p.form), total_points: Number(p.total_points) }
+      })
+      .filter(p => p.ownership_pct < 15)
+      .sort((a, b) => b.form - a.form)
+      .slice(0, 10)
+
+    sendSuccess(res, differentials)
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 export default router
