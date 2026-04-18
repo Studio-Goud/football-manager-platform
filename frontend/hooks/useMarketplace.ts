@@ -8,9 +8,13 @@ interface MarketplaceFilters {
   position?: string
   min_price?: number
   max_price?: number
+  max?: number
   club?: string
   search?: string
+  listing_type?: string
+  sort_by?: string
   page?: number
+  per_page?: number
 }
 
 export function useMarketplace(filters?: MarketplaceFilters) {

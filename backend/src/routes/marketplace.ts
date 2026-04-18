@@ -9,7 +9,7 @@ const router = Router()
 
 // GET /marketplace
 router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
-  const { position, min_price, max_price, search, page = '1', per_page = '20' } = req.query
+  const { position, min_price, max_price, search, listing_type, sort_by, page = '1', per_page = '20' } = req.query
   const pageNum = Math.max(1, parseInt(page as string))
   const perPageNum = Math.min(50, parseInt(per_page as string))
   const skip = (pageNum - 1) * perPageNum
@@ -26,13 +26,25 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response): Promise<v
     if (min_price) (where.price as Record<string, unknown>).gte = parseFloat(min_price as string)
     if (max_price) (where.price as Record<string, unknown>).lte = parseFloat(max_price as string)
   }
+  if (listing_type && (listing_type === 'fixed' || listing_type === 'auction')) {
+    where.listing_type = (listing_type as string).toUpperCase()
+  }
+
+  type OrderBy = Record<string, unknown>
+  let orderBy: OrderBy | OrderBy[]
+  switch (sort_by) {
+    case 'price_asc':  orderBy = { price: 'asc' }; break
+    case 'price_desc': orderBy = { price: 'desc' }; break
+    case 'form':       orderBy = { player: { form: 'desc' } }; break
+    default:           orderBy = { created_at: 'desc' }
+  }
 
   try {
     const [listings, total] = await Promise.all([
       prisma.marketplaceListing.findMany({
         where,
         include: { player: true, seller: { select: { username: true } } },
-        orderBy: { created_at: 'desc' },
+        orderBy,
         skip,
         take: perPageNum,
       }),
