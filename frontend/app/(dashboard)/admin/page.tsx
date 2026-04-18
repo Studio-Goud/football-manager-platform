@@ -40,7 +40,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'overview' | 'users' | 'seasons' | 'matches' | 'data'>('overview')
+  const [tab, setTab] = useState<'overview' | 'users' | 'seasons' | 'gameweeks' | 'matches' | 'data'>('overview')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   useEffect(() => {
@@ -175,11 +175,11 @@ export default function AdminPage() {
 
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
-        {(['overview', 'users', 'seasons', 'matches', 'data'] as const).map(t => (
+        {(['overview', 'users', 'seasons', 'gameweeks', 'matches', 'data'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === t ? 'bg-[#00FF87] text-black' : 'bg-[#162040] text-gray-400 hover:text-white'}`}
           >
-            {t === 'overview' ? 'Overzicht' : t === 'users' ? 'Gebruikers' : t === 'seasons' ? 'Seizoenen' : t === 'matches' ? 'Wedstrijden' : 'Data'}
+            {t === 'overview' ? 'Overzicht' : t === 'users' ? 'Gebruikers' : t === 'seasons' ? 'Seizoenen' : t === 'gameweeks' ? 'Speelrondes' : t === 'matches' ? 'Wedstrijden' : 'Data'}
           </button>
         ))}
       </div>
@@ -289,6 +289,9 @@ export default function AdminPage() {
       {tab === 'seasons' && (
         <SeasonManager stats={stats} doAction={doAction} actionLoading={actionLoading} />
       )}
+
+      {/* Speelrondes */}
+      {tab === 'gameweeks' && <GameweekManager />}
 
       {/* Wedstrijden */}
       {tab === 'matches' && <MatchManager />}
@@ -411,6 +414,103 @@ interface AdminMatch {
   home_score: number | null
   away_score: number | null
   prediction_count: number
+}
+
+interface AdminGameweek {
+  id: number
+  number: number
+  status: string
+  deadline: string
+  start_date: string
+  match_count: number
+  team_count: number
+}
+
+function GameweekManager() {
+  const { data: gameweeks = [], refetch, isLoading } = useQuery<AdminGameweek[]>({
+    queryKey: ['admin-gameweeks'],
+    queryFn: async () => {
+      const res = await api.get('/admin/gameweeks')
+      return res.data.data ?? []
+    },
+  })
+  const [actionLoading, setActionLoading] = useState<number | null>(null)
+
+  const activateGw = async (id: number) => {
+    setActionLoading(id)
+    try {
+      await api.post(`/admin/gameweeks/${id}/activate`)
+      toast.success('Speelronde geactiveerd')
+      refetch()
+    } catch {
+      toast.error('Activeren mislukt')
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const createGw = async () => {
+    try {
+      await api.post('/admin/gameweeks/create')
+      toast.success('Nieuwe speelronde aangemaakt')
+      refetch()
+    } catch {
+      toast.error('Aanmaken mislukt')
+    }
+  }
+
+  const statusColor: Record<string, string> = {
+    UPCOMING: 'text-gray-400 bg-gray-500/10',
+    ACTIVE: 'text-[#00FF87] bg-[#00FF87]/10',
+    FINISHED: 'text-blue-400 bg-blue-500/10',
+  }
+
+  return (
+    <Card className="p-5">
+      <div className="flex items-center justify-between mb-4">
+        <h2 className="font-bold">Speelronde beheer</h2>
+        <button onClick={createGw} className="px-3 py-1.5 bg-[#00FF87] text-black rounded-lg text-sm font-bold hover:bg-[#00CC6A] transition-colors">
+          + Nieuwe speelronde
+        </button>
+      </div>
+      {isLoading ? (
+        <div className="space-y-2">{[1,2,3].map(i => <div key={i} className="h-12 bg-[#1E2A45] rounded-lg animate-pulse" />)}</div>
+      ) : gameweeks.length === 0 ? (
+        <p className="text-gray-500 text-sm text-center py-8">Geen speelrondes gevonden</p>
+      ) : (
+        <div className="space-y-2">
+          {gameweeks.map(gw => (
+            <div key={gw.id} className="flex items-center gap-3 p-3 bg-[#0A0E1A] rounded-xl">
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-bold text-sm">Speelronde {gw.number}</span>
+                  <span className={`text-[10px] font-black px-2 py-0.5 rounded-full ${statusColor[gw.status] ?? 'text-gray-400 bg-gray-500/10'}`}>
+                    {gw.status}
+                  </span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Deadline: {new Date(gw.deadline).toLocaleString('nl-NL', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  {' · '}{gw.match_count} wedstrijden · {gw.team_count} teams
+                </p>
+              </div>
+              {gw.status !== 'ACTIVE' && (
+                <button
+                  onClick={() => activateGw(gw.id)}
+                  disabled={actionLoading === gw.id}
+                  className="px-3 py-1.5 text-xs font-bold border border-[#00FF87]/30 text-[#00FF87] rounded-lg hover:bg-[#00FF87]/10 transition-colors disabled:opacity-50"
+                >
+                  {actionLoading === gw.id ? '...' : 'Activeer'}
+                </button>
+              )}
+              {gw.status === 'ACTIVE' && (
+                <span className="text-xs text-[#00FF87] font-bold">● Actief</span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
+  )
 }
 
 function MatchManager() {

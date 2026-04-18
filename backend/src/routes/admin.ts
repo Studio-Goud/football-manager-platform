@@ -322,4 +322,76 @@ router.put('/matches/:id/result', async (req: AuthRequest, res: Response): Promi
   }
 })
 
+// GET /admin/gameweeks — alle speelrondes van actief seizoen
+router.get('/gameweeks', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const season = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    if (!season) { sendError(res, 'Geen actief seizoen', 404); return }
+
+    const gameweeks = await prisma.gameweek.findMany({
+      where: { season_id: season.id },
+      orderBy: { number: 'asc' },
+      include: { _count: { select: { matches: true, team_gameweeks: true } } },
+    })
+
+    sendSuccess(res, gameweeks.map(gw => ({
+      id: gw.id,
+      number: gw.number,
+      status: gw.status,
+      deadline: gw.deadline,
+      start_date: gw.start_date,
+      end_date: gw.end_date,
+      match_count: gw._count.matches,
+      team_count: gw._count.team_gameweeks,
+    })))
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// POST /admin/gameweeks/:id/activate — activeer een speelronde
+router.post('/gameweeks/:id/activate', async (req: AuthRequest, res: Response): Promise<void> => {
+  const gwId = parseInt(req.params.id)
+  try {
+    const season = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    if (season) {
+      await prisma.gameweek.updateMany({ where: { season_id: season.id, status: 'ACTIVE' }, data: { status: 'FINISHED' } })
+    }
+    const gw = await prisma.gameweek.update({ where: { id: gwId }, data: { status: 'ACTIVE' } })
+    sendSuccess(res, { id: gw.id, number: gw.number }, `Speelronde ${gw.number} geactiveerd`)
+  } catch {
+    sendError(res, 'Activeren mislukt', 500)
+  }
+})
+
+// POST /admin/gameweeks/create — maak nieuwe speelronde aan
+router.post('/gameweeks/create', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const season = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    if (!season) { sendError(res, 'Geen actief seizoen', 404); return }
+
+    const lastGw = await prisma.gameweek.findFirst({
+      where: { season_id: season.id },
+      orderBy: { number: 'desc' },
+    })
+    const nextNumber = (lastGw?.number ?? 0) + 1
+    const now = new Date()
+    const deadline = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    const gw = await prisma.gameweek.create({
+      data: {
+        season_id: season.id,
+        number: nextNumber,
+        deadline,
+        start_date: deadline,
+        end_date: new Date(deadline.getTime() + 7 * 24 * 60 * 60 * 1000),
+        status: 'UPCOMING',
+      },
+    })
+    sendSuccess(res, { id: gw.id, number: gw.number }, `Speelronde ${gw.number} aangemaakt`)
+  } catch {
+    sendError(res, 'Aanmaken mislukt', 500)
+  }
+})
+
 export default router
