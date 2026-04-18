@@ -32,6 +32,8 @@ import pushRoutes from './routes/push'
 import { sendPushToUser } from './services/pushService'
 
 import { fetchLiveMatches, fetchMatchEvents, mapApiEventToScoring, updatePlayerPrices } from './services/footballApiService'
+import { createNotification } from './services/notificationService'
+import { processSeasonEndRewards, giveNewSeasonBonus } from './services/seasonRewardService'
 import { calculateTeamGameweekPoints, SCORING } from './services/scoringService'
 import { runSimulationTick } from './services/simulationService'
 import prisma from './config/database'
@@ -317,6 +319,55 @@ cron.schedule('0 * * * *', async () => {
     }
   } catch (err) {
     logger.error('Auction processor error', { err })
+  }
+})
+
+// Every hour: deadline reminders (24h and 2h before gameweek deadline)
+cron.schedule('0 * * * *', async () => {
+  try {
+    const now = new Date()
+    const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000)
+    const in2h  = new Date(now.getTime() + 2  * 60 * 60 * 1000)
+
+    const upcomingGws = await prisma.gameweek.findMany({
+      where: { status: 'UPCOMING', deadline: { gte: now, lte: in24h } },
+    })
+
+    for (const gw of upcomingGws) {
+      const dl = new Date(gw.deadline)
+      const hoursLeft = Math.round((dl.getTime() - now.getTime()) / 3600000)
+      if (hoursLeft !== 24 && hoursLeft !== 2) continue
+
+      const users = await prisma.user.findMany({ select: { id: true } })
+      for (const u of users) {
+        await createNotification(
+          u.id, 'DEADLINE',
+          `Deadline over ${hoursLeft} uur`,
+          `Speelronde ${gw.number} sluit over ${hoursLeft} uur. Pas je opstelling nog aan!`,
+          '/team'
+        )
+      }
+      logger.info(`Deadline reminders sent: GW ${gw.number}, ${hoursLeft}h left`)
+    }
+  } catch (err) {
+    logger.error('Deadline reminder error', { err })
+  }
+})
+
+// Daily at midnight: check for ended seasons and issue rewards
+cron.schedule('0 0 * * *', async () => {
+  try {
+    const endedSeasons = await prisma.season.findMany({
+      where: { status: 'ACTIVE', end_date: { lte: new Date() } },
+    })
+    for (const season of endedSeasons) {
+      await prisma.season.update({ where: { id: season.id }, data: { status: 'COMPLETED' } })
+      await processSeasonEndRewards(season.id)
+      await giveNewSeasonBonus()
+      logger.info('Season completed and rewards issued', { seasonId: season.id })
+    }
+  } catch (err) {
+    logger.error('Season end processing error', { err })
   }
 })
 
