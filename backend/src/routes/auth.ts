@@ -149,7 +149,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response): Promise
       select: {
         id: true, email: true, username: true, tier: true,
         kyc_status: true, balance_credits: true, is_admin: true,
-        created_at: true, last_active: true,
+        avatar_emoji: true, created_at: true, last_active: true,
       },
     })
 
@@ -162,6 +162,7 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response): Promise
       id: user.id,
       email: user.email,
       username: user.username,
+      avatar_emoji: user.avatar_emoji,
       balance_credits: Number(user.balance_credits),
       tier: user.tier.toLowerCase(),
       kyc_status: user.kyc_status.toLowerCase(),
@@ -171,6 +172,51 @@ router.get('/me', authenticate, async (req: AuthRequest, res: Response): Promise
     })
   } catch (err) {
     sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// PATCH /auth/profile — update username en/of avatar emoji
+router.patch('/profile', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  const { username, avatar_emoji } = req.body
+
+  const VALID_AVATARS = ['⚽','🏆','🌟','🔥','⚡','🦁','🐅','🦊','🦅','🎯','💎','🚀','👑','🎮','🏅']
+
+  const updateData: { username?: string; avatar_emoji?: string } = {}
+
+  if (username !== undefined) {
+    if (typeof username !== 'string' || username.trim().length < 3 || username.trim().length > 30) {
+      sendError(res, 'Gebruikersnaam moet 3–30 tekens zijn', 400)
+      return
+    }
+    const taken = await prisma.user.findFirst({
+      where: { username: username.trim(), NOT: { id: req.user!.id } },
+    })
+    if (taken) { sendError(res, 'Gebruikersnaam al in gebruik', 409); return }
+    updateData.username = username.trim()
+  }
+
+  if (avatar_emoji !== undefined) {
+    if (!VALID_AVATARS.includes(avatar_emoji)) {
+      sendError(res, 'Ongeldig avatar', 400)
+      return
+    }
+    updateData.avatar_emoji = avatar_emoji
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    sendError(res, 'Geen wijzigingen opgegeven', 400)
+    return
+  }
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: req.user!.id },
+      data: updateData,
+      select: { id: true, username: true, avatar_emoji: true },
+    })
+    sendSuccess(res, updated, 'Profiel bijgewerkt')
+  } catch {
+    sendError(res, 'Bijwerken mislukt', 500)
   }
 })
 

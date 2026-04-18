@@ -23,6 +23,7 @@ model User {
   is_suspended    Boolean  @default(false)
   date_of_birth   DateTime?
   country         String?
+  avatar_emoji    String   @default("⚽")
   created_at      DateTime @default(now())
   updated_at      DateTime @updatedAt
   last_active     DateTime @default(now())

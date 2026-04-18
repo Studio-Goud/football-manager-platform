@@ -546,6 +546,28 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
     const transfersOut = [...currentPlayerIds].filter(pid => !newPlayerIds.has(pid))
     const transfersIn = [...newPlayerIds].filter(pid => !currentPlayerIds.has(pid))
 
+    // Check deadline lock
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const activeGw = await prisma.gameweek.findFirst({
+      where: { season_id: currentSeason?.id, status: 'ACTIVE' },
+    })
+    if (activeGw && new Date() > activeGw.deadline && transfersIn.length > 0) {
+      sendError(res, `Transfer deadline verstreken voor speelronde ${activeGw.number}`, 403)
+      return
+    }
+
+    // Bereken penalty voor extra transfers (>1 per GW)
+    let penaltyPoints = 0
+    if (activeGw && transfersIn.length > 0) {
+      const gwStart = activeGw.start_date
+      const prevTransfersThisGw = await prisma.transaction.count({
+        where: { user_id: req.user!.id, type: 'transfer_in', created_at: { gte: gwStart } },
+      })
+      const totalAfter = prevTransfersThisGw + transfersIn.length
+      const extraTransfers = Math.max(0, totalAfter - 1)
+      penaltyPoints = extraTransfers * 4
+    }
+
     // Replace all team players
     await prisma.teamPlayer.deleteMany({ where: { team_id: id } })
 
@@ -596,7 +618,20 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
       await prisma.transaction.createMany({ data: transferLogs })
     }
 
-    sendSuccess(res, { id }, 'Team opgeslagen')
+    // Pas penalty toe op team totaalpunten
+    if (penaltyPoints > 0) {
+      await prisma.team.update({
+        where: { id },
+        data: { total_points: { decrement: penaltyPoints } },
+      })
+    }
+
+    sendSuccess(res, {
+      id,
+      transfers_in: transfersIn.length,
+      transfers_out: transfersOut.length,
+      penalty_points: penaltyPoints,
+    }, penaltyPoints > 0 ? `Team opgeslagen · -${penaltyPoints} punten straf voor extra transfers` : 'Team opgeslagen')
   } catch {
     sendError(res, 'Opslaan mislukt', 500)
   }
@@ -702,6 +737,49 @@ router.get('/gameweek-winners', authenticate, async (_req: AuthRequest, res: Res
     }
 
     sendSuccess(res, winners)
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// GET /teams/my/transfer-status — vrije transfers en deadline deze GW
+router.get('/my/transfer-status', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const activeGw = await prisma.gameweek.findFirst({
+      where: { season_id: currentSeason?.id, status: 'ACTIVE' },
+    })
+
+    if (!activeGw) {
+      sendSuccess(res, { free_transfers: 1, transfers_used: 0, penalty_per_extra: 4, is_locked: false, deadline: null })
+      return
+    }
+
+    const team = await prisma.team.findFirst({
+      where: { user_id: req.user!.id, ...(currentSeason ? { season_id: currentSeason.id } : {}) },
+      orderBy: { created_at: 'desc' },
+    })
+
+    const gwStart = activeGw.start_date
+    const transfersThisGw = team ? await prisma.transaction.count({
+      where: {
+        user_id: req.user!.id,
+        type: 'transfer_in',
+        created_at: { gte: gwStart },
+      },
+    }) : 0
+
+    const isLocked = new Date() > activeGw.deadline
+
+    sendSuccess(res, {
+      free_transfers: Math.max(0, 1 - transfersThisGw),
+      transfers_used: transfersThisGw,
+      penalty_per_extra: 4,
+      total_penalty: Math.max(0, transfersThisGw - 1) * 4,
+      is_locked: isLocked,
+      deadline: activeGw.deadline.toISOString(),
+      gameweek: activeGw.number,
+    })
   } catch {
     sendError(res, 'Ophalen mislukt', 500)
   }

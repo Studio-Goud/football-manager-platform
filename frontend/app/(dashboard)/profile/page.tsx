@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { motion } from 'framer-motion'
 import { useQuery } from '@tanstack/react-query'
 import { useAuthStore } from '@/store/authStore'
@@ -13,12 +13,14 @@ import { Skeleton } from '@/components/ui/Skeleton'
 import { DepositModal } from '@/components/profile/DepositModal'
 import { TransactionTable } from '@/components/profile/TransactionTable'
 import { TierProgress } from '@/components/profile/TierProgress'
-import { PlusCircle, CreditCard, BarChart2, User, Trophy, Zap, Users, Medal, Bell, Activity, TrendingUp } from 'lucide-react'
+import { PlusCircle, CreditCard, BarChart2, User, Trophy, Zap, Users, Medal, Bell, Activity, TrendingUp, Settings, Check } from 'lucide-react'
 import Link from 'next/link'
 import api from '@/lib/api'
 import { requestPushPermission } from '@/hooks/usePushNotifications'
 
-type Tab = 'overview' | 'stats' | 'transactions' | 'tier' | 'achievements' | 'activity'
+type Tab = 'overview' | 'stats' | 'transactions' | 'tier' | 'achievements' | 'activity' | 'settings'
+
+const AVATAR_OPTIONS = ['⚽','🏆','🌟','🔥','⚡','🦁','🐅','🦊','🦅','🎯','💎','🚀','👑','🎮','🏅']
 
 interface SeasonStats {
   gameweeks: Array<{ gw: number; name: string; points: number; rank: number | null }>
@@ -48,6 +50,10 @@ export default function ProfilePage() {
   const { data: leaderboard } = useLeaderboard()
   const [tab, setTab] = useState<Tab>('overview')
   const [depositOpen, setDepositOpen] = useState(false)
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsMsg, setSettingsMsg] = useState<string | null>(null)
+  const [editUsername, setEditUsername] = useState('')
+  const [editAvatar, setEditAvatar] = useState('')
 
   const { data: achievements = [] } = useQuery<Achievement[]>({
     queryKey: ['my-achievements'],
@@ -104,12 +110,32 @@ export default function ProfilePage() {
     staleTime: 60000,
   })
 
+  const saveSettings = async () => {
+    setSettingsSaving(true)
+    setSettingsMsg(null)
+    try {
+      const body: Record<string, string> = {}
+      if (editUsername.trim()) body.username = editUsername.trim()
+      if (editAvatar) body.avatar_emoji = editAvatar
+      if (Object.keys(body).length === 0) { setSettingsMsg('Geen wijzigingen'); setSettingsSaving(false); return }
+      await api.patch('/auth/profile', body)
+      setSettingsMsg('✅ Profiel opgeslagen! Vernieuw de pagina om je naam te zien.')
+      setEditUsername('')
+      setEditAvatar('')
+    } catch {
+      setSettingsMsg('❌ Opslaan mislukt')
+    } finally {
+      setSettingsSaving(false)
+    }
+  }
+
   const tabs = [
     { key: 'overview' as Tab,      label: 'Overzicht',    icon: User },
     { key: 'stats' as Tab,         label: 'Stats',        icon: TrendingUp },
     { key: 'activity' as Tab,      label: 'Activiteit',   icon: Activity },
     { key: 'transactions' as Tab,  label: 'Transacties',  icon: CreditCard },
     { key: 'achievements' as Tab,  label: 'Badges',       icon: Medal },
+    { key: 'settings' as Tab,      label: 'Instellingen', icon: Settings },
   ]
 
   return (
@@ -426,6 +452,62 @@ export default function ProfilePage() {
               </Card>
             )}
           </div>
+        )}
+        {tab === 'settings' && (
+          <Card className="p-5 space-y-6">
+            <h2 className="font-bold">Profiel instellingen</h2>
+
+            {/* Avatar picker */}
+            <div>
+              <p className="text-sm text-gray-400 mb-3">Kies een avatar</p>
+              <div className="flex flex-wrap gap-2">
+                {AVATAR_OPTIONS.map(em => (
+                  <button
+                    key={em}
+                    onClick={() => setEditAvatar(em)}
+                    className={`w-11 h-11 text-2xl flex items-center justify-center rounded-xl border-2 transition-all ${
+                      editAvatar === em
+                        ? 'border-[#00FF87] bg-[#00FF87]/10 scale-110'
+                        : 'border-[#1E2A45] hover:border-[#2A3A55]'
+                    }`}
+                  >
+                    {em}
+                  </button>
+                ))}
+              </div>
+              {editAvatar && (
+                <p className="text-xs text-[#00FF87] mt-2">Geselecteerd: {editAvatar}</p>
+              )}
+            </div>
+
+            {/* Username */}
+            <div>
+              <label className="text-sm text-gray-400 block mb-2">Gebruikersnaam wijzigen</label>
+              <input
+                type="text"
+                value={editUsername}
+                onChange={e => setEditUsername(e.target.value)}
+                placeholder={`Huidig: ${currentUser.username}`}
+                maxLength={30}
+                className="w-full bg-[#0A0E1A] border border-[#1E2A45] rounded-xl px-4 py-2.5 text-white placeholder-gray-600 text-sm focus:outline-none focus:border-[#00FF87]/50"
+              />
+            </div>
+
+            {settingsMsg && (
+              <p className={`text-sm font-medium ${settingsMsg.startsWith('✅') ? 'text-[#00FF87]' : 'text-red-400'}`}>
+                {settingsMsg}
+              </p>
+            )}
+
+            <button
+              onClick={saveSettings}
+              disabled={settingsSaving || (!editUsername.trim() && !editAvatar)}
+              className="flex items-center gap-2 bg-[#00FF87] text-black px-4 py-2 rounded-xl font-bold text-sm disabled:opacity-40 disabled:cursor-not-allowed hover:bg-[#00CC6A] transition-colors"
+            >
+              <Check className="w-4 h-4" />
+              {settingsSaving ? 'Opslaan...' : 'Opslaan'}
+            </button>
+          </Card>
         )}
       </motion.div>
 

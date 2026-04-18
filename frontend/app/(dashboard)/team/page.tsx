@@ -78,6 +78,19 @@ export default function TeamPage() {
   })
 
   const isDeadlinePassed = gameweek?.deadline ? new Date(gameweek.deadline) < new Date() : false
+
+  const { data: transferStatus } = useQuery({
+    queryKey: ['transfer-status'],
+    queryFn: async () => {
+      const res = await api.get('/teams/my/transfer-status')
+      return res.data.data as {
+        free_transfers: number; transfers_used: number; penalty_per_extra: number;
+        total_penalty: number; is_locked: boolean; deadline: string | null; gameweek: number
+      }
+    },
+    staleTime: 30000,
+    enabled: !!team,
+  })
   const [tactic, setTacticLocal] = useState<TacticStyle>('BALANCED')
   const [players, setPlayers] = useState<TeamPlayer[]>([])
 
@@ -216,6 +229,29 @@ export default function TeamPage() {
           <div>
             <p className="font-semibold text-orange-400 text-sm">Transfers vergrendeld</p>
             <p className="text-xs text-gray-400">De deadline voor deze speelronde is verstreken. Je kunt geen wijzigingen meer maken.</p>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer status banner */}
+      {transferStatus && !isDeadlinePassed && (
+        <div className={`rounded-xl p-3 flex items-center gap-3 border ${
+          transferStatus.free_transfers > 0
+            ? 'bg-[#00FF87]/5 border-[#00FF87]/20'
+            : 'bg-orange-500/5 border-orange-500/20'
+        }`}>
+          <span className="text-xl">{transferStatus.free_transfers > 0 ? '🔄' : '⚠️'}</span>
+          <div>
+            {transferStatus.free_transfers > 0 ? (
+              <p className="text-sm font-semibold text-[#00FF87]">{transferStatus.free_transfers} gratis transfer beschikbaar</p>
+            ) : (
+              <p className="text-sm font-semibold text-orange-400">Geen gratis transfers meer</p>
+            )}
+            <p className="text-xs text-gray-400">
+              {transferStatus.transfers_used} transfer{transferStatus.transfers_used !== 1 ? 's' : ''} gebruikt
+              {transferStatus.total_penalty > 0 && ` · -${transferStatus.total_penalty} punten straf`}
+              {' · '}extra transfer = -{transferStatus.penalty_per_extra} pts
+            </p>
           </div>
         </div>
       )}
