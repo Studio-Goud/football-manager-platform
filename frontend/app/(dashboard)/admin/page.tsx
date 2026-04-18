@@ -101,6 +101,12 @@ export default function AdminPage() {
     toast.success(`✅ ${res.data?.data?.count ?? 0} achievements aangemaakt`, { duration: 4000 })
   })
 
+  const seedCompetitions = () => doAction('Competities zaai', async () => {
+    const res = await api.post('/admin/seed-competitions')
+    const r = res.data?.data
+    toast.success(`✅ ${r?.leagues ?? 0} leagues, ${r?.users ?? 0} gebruikers, ${r?.teams ?? 0} teams aangemaakt`, { duration: 5000 })
+  })
+
   const createSeason = () => doAction('Seizoen aanmaken', () =>
     api.post('/admin/seasons', { name: `Seizoen ${new Date().getFullYear()}` })
   )
@@ -209,6 +215,10 @@ export default function AdminPage() {
               <Button onClick={seedAchievements} loading={actionLoading === 'Achievements zaai'} className="w-full" variant="secondary">
                 <Trophy className="w-4 h-4 mr-2" />
                 Achievements zaai (badges)
+              </Button>
+              <Button onClick={seedCompetitions} loading={actionLoading === 'Competities zaai'} className="w-full" variant="secondary">
+                <Users className="w-4 h-4 mr-2" />
+                Test competities zaai (4 leagues + nepspelers)
               </Button>
             </div>
           </Card>

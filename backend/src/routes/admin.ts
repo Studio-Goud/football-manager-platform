@@ -5,6 +5,7 @@ import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth'
 import { syncEredivisiePlayers } from '../services/syncPlayersService'
 import { processSeasonEndRewards, giveNewSeasonBonus } from '../services/seasonRewardService'
 import { seedDemoDataForce } from '../seed-demo'
+import { seedCompetities } from '../seed-competitions'
 import { fixTeamForUser } from '../services/simulationService'
 import { seedAchievements } from '../services/achievementService'
 import logger from '../config/logger'
@@ -161,6 +162,17 @@ router.post('/seed-demo', async (_req: AuthRequest, res: Response): Promise<void
     sendSuccess(res, result, `Demo seed klaar: ${result.players} spelers, seizoen ${result.season ? 'aangemaakt' : 'al aanwezig'}`)
   } catch {
     sendError(res, 'Seed mislukt', 500)
+  }
+})
+
+// POST /admin/seed-competitions — maak 4 testcompetities met nepgebruikers aan
+router.post('/seed-competitions', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const result = await seedCompetities()
+    sendSuccess(res, result, `Competitie-seed klaar: ${result.leagues} leagues, ${result.users} nieuwe gebruikers, ${result.teams} teams`)
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : 'Onbekende fout'
+    sendError(res, `Seed mislukt: ${msg}`, 500)
   }
 })
 
