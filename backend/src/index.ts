@@ -29,6 +29,7 @@ import sponsorRoutes from './routes/sponsors'
 import notificationRoutes from './routes/notifications'
 import predictionRoutes from './routes/predictions'
 import pushRoutes from './routes/push'
+import { sendPushToUser } from './services/pushService'
 
 import { fetchLiveMatches, fetchMatchEvents, mapApiEventToScoring, updatePlayerPrices } from './services/footballApiService'
 import { calculateTeamGameweekPoints, SCORING } from './services/scoringService'
@@ -254,6 +255,18 @@ cron.schedule('* * * * *', async () => {
                   photo_url: tp.player.photo_url ?? null,
                 },
               })
+
+              // Push notification for goals/assists
+              if (mappedEvent.event_type === 'goal' || mappedEvent.event_type === 'assist') {
+                const eventEmoji = mappedEvent.event_type === 'goal' ? '⚽' : '🅰️'
+                const captainNote = tp.is_captain ? ' (C ×2)' : ''
+                sendPushToUser(
+                  userId,
+                  `${eventEmoji} ${mappedEvent.player_name}`,
+                  `${mappedEvent.event_type === 'goal' ? 'Doelpunt' : 'Assist'} in minuut ${mappedEvent.minute}! +${delta} punten${captainNote}`,
+                  '/live'
+                ).catch(() => {})
+              }
             }
           } catch (err) {
             logger.warn('user:points emit failed', { err })

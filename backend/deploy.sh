@@ -18,5 +18,12 @@ else
 fi
 
 echo "✅ Database ready"
+
+# Validate required env vars
+if [ -z "$VAPID_PUBLIC_KEY" ] || [ -z "$VAPID_PRIVATE_KEY" ]; then
+  echo "⚠️  VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY not set — web push disabled"
+  echo "   Set these in Railway: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT"
+fi
+
 echo "🚀 Starting server..."
 node dist/index.js
