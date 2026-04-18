@@ -250,4 +250,76 @@ router.post('/seed-achievements', async (_req: AuthRequest, res: Response): Prom
   }
 })
 
+// GET /admin/matches — wedstrijden voor admin beheer (recent + upcoming)
+router.get('/matches', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const matches = await prisma.match.findMany({
+      where: {
+        kickoff: { gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      },
+      orderBy: { kickoff: 'asc' },
+      take: 50,
+      include: {
+        _count: { select: { predictions: true } },
+      },
+    })
+    sendSuccess(res, matches.map(m => ({
+      id: m.id,
+      home_team: m.home_team,
+      away_team: m.away_team,
+      kickoff: m.kickoff,
+      status: m.status,
+      home_score: m.home_score,
+      away_score: m.away_score,
+      prediction_count: m._count.predictions,
+    })))
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// PUT /admin/matches/:id/result — stel wedstrijdresultaat in + auto-score voorspellingen
+router.put('/matches/:id/result', async (req: AuthRequest, res: Response): Promise<void> => {
+  const { home_score, away_score } = req.body
+  if (home_score == null || away_score == null || isNaN(Number(home_score)) || isNaN(Number(away_score))) {
+    sendError(res, 'home_score en away_score verplicht', 400)
+    return
+  }
+  try {
+    const match = await prisma.match.update({
+      where: { id: parseInt(req.params.id) },
+      data: {
+        home_score: parseInt(home_score),
+        away_score: parseInt(away_score),
+        status: 'FT',
+      },
+    })
+
+    const unscored = await prisma.prediction.findMany({
+      where: { match_id: match.id, scored: false },
+    })
+
+    function calcPoints(pred: { home_goals: number; away_goals: number }, result: { home_score: number; away_score: number }): number {
+      if (pred.home_goals === result.home_score && pred.away_goals === result.away_score) return 8
+      const predWinner = pred.home_goals > pred.away_goals ? 'H' : pred.home_goals < pred.away_goals ? 'A' : 'D'
+      const realWinner = result.home_score > result.away_score ? 'H' : result.home_score < result.away_score ? 'A' : 'D'
+      if (predWinner !== realWinner) return 0
+      return predWinner === 'D' ? 1 : 3
+    }
+
+    for (const pred of unscored) {
+      const pts = calcPoints(pred, { home_score: match.home_score!, away_score: match.away_score! })
+      await prisma.prediction.update({
+        where: { id: pred.id },
+        data: { points: pts, scored: true },
+      })
+    }
+
+    logger.info('Match result set + predictions scored', { matchId: match.id, home_score, away_score, scored: unscored.length })
+    sendSuccess(res, { match_id: match.id, predictions_scored: unscored.length }, `Resultaat opgeslagen, ${unscored.length} voorspellingen gescoord`)
+  } catch {
+    sendError(res, 'Opslaan mislukt', 500)
+  }
+})
+
 export default router

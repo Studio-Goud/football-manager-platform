@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { Shield, Users, Trophy, Zap, RefreshCw, CheckCircle, AlertCircle, Database, Calendar, Play, Square } from 'lucide-react'
+import { Shield, Users, Trophy, Zap, RefreshCw, CheckCircle, AlertCircle, Database, Calendar, Play, Square, Target, Edit3 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { useAuthStore } from '@/store/authStore'
@@ -40,7 +40,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<AdminStats | null>(null)
   const [users, setUsers] = useState<AdminUser[]>([])
   const [loading, setLoading] = useState(true)
-  const [tab, setTab] = useState<'overview' | 'users' | 'seasons' | 'data'>('overview')
+  const [tab, setTab] = useState<'overview' | 'users' | 'seasons' | 'matches' | 'data'>('overview')
   const [actionLoading, setActionLoading] = useState<string | null>(null)
 
   useEffect(() => {
@@ -174,12 +174,12 @@ export default function AdminPage() {
       )}
 
       {/* Tabs */}
-      <div className="flex gap-2">
-        {(['overview', 'users', 'seasons', 'data'] as const).map(t => (
+      <div className="flex gap-2 flex-wrap">
+        {(['overview', 'users', 'seasons', 'matches', 'data'] as const).map(t => (
           <button key={t} onClick={() => setTab(t)}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition-colors ${tab === t ? 'bg-[#00FF87] text-black' : 'bg-[#162040] text-gray-400 hover:text-white'}`}
           >
-            {t === 'overview' ? 'Overzicht' : t === 'users' ? 'Gebruikers' : t === 'seasons' ? 'Seizoenen' : 'Data'}
+            {t === 'overview' ? 'Overzicht' : t === 'users' ? 'Gebruikers' : t === 'seasons' ? 'Seizoenen' : t === 'matches' ? 'Wedstrijden' : 'Data'}
           </button>
         ))}
       </div>
@@ -290,6 +290,9 @@ export default function AdminPage() {
         <SeasonManager stats={stats} doAction={doAction} actionLoading={actionLoading} />
       )}
 
+      {/* Wedstrijden */}
+      {tab === 'matches' && <MatchManager />}
+
       {/* Data */}
       {tab === 'data' && (
         <Card className="p-5">
@@ -396,5 +399,126 @@ function SeasonManager({ stats, doAction, actionLoading }: {
         )}
       </Card>
     </div>
+  )
+}
+
+interface AdminMatch {
+  id: number
+  home_team: string
+  away_team: string
+  kickoff: string
+  status: string
+  home_score: number | null
+  away_score: number | null
+  prediction_count: number
+}
+
+function MatchManager() {
+  const { data: matches = [], refetch, isLoading } = useQuery<AdminMatch[]>({
+    queryKey: ['admin-matches'],
+    queryFn: async () => {
+      const res = await api.get('/admin/matches')
+      return res.data.data ?? []
+    },
+  })
+
+  const [editing, setEditing] = useState<number | null>(null)
+  const [homeScore, setHomeScore] = useState(0)
+  const [awayScore, setAwayScore] = useState(0)
+  const [saving, setSaving] = useState(false)
+
+  const saveResult = async (matchId: number) => {
+    setSaving(true)
+    try {
+      const res = await api.put(`/admin/matches/${matchId}/result`, { home_score: homeScore, away_score: awayScore })
+      toast.success(res.data.message ?? 'Resultaat opgeslagen')
+      setEditing(null)
+      refetch()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.message ?? 'Opslaan mislukt')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const openEdit = (m: AdminMatch) => {
+    setEditing(m.id)
+    setHomeScore(m.home_score ?? 0)
+    setAwayScore(m.away_score ?? 0)
+  }
+
+  return (
+    <Card className="overflow-hidden">
+      <div className="p-4 border-b border-[#1E2A45] flex items-center gap-2">
+        <Target className="w-4 h-4 text-[#00FF87]" />
+        <h2 className="font-bold">Wedstrijden & Voorspellingen</h2>
+        <span className="text-xs text-gray-500 ml-auto">{matches.length} wedstrijden (afgelopen 7 dagen)</span>
+      </div>
+
+      {isLoading ? (
+        <div className="p-8 text-center text-gray-500">Laden...</div>
+      ) : matches.length === 0 ? (
+        <div className="p-8 text-center text-gray-500 text-sm">Geen wedstrijden gevonden</div>
+      ) : (
+        <div className="divide-y divide-[#1E2A45]">
+          {matches.map(m => (
+            <div key={m.id} className="px-4 py-3">
+              <div className="flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-sm">{m.home_team} vs {m.away_team}</p>
+                  <p className="text-xs text-gray-500">
+                    {new Date(m.kickoff).toLocaleString('nl-NL', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {m.prediction_count > 0 && <span className="ml-2 text-[#00FF87]">· {m.prediction_count} voorspellingen</span>}
+                  </p>
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                  m.status === 'FT' ? 'bg-gray-700 text-gray-400' :
+                  m.status === 'LIVE' ? 'bg-red-400/20 text-red-400 animate-pulse' :
+                  'bg-blue-400/10 text-blue-400'
+                }`}>{m.status}</span>
+                {m.home_score != null && (
+                  <span className="text-sm font-black text-white flex-shrink-0">{m.home_score}–{m.away_score}</span>
+                )}
+                <button
+                  onClick={() => editing === m.id ? setEditing(null) : openEdit(m)}
+                  className="p-1.5 rounded-lg hover:bg-[#1E2A45] transition-colors flex-shrink-0"
+                >
+                  <Edit3 className="w-3.5 h-3.5 text-gray-400" />
+                </button>
+              </div>
+
+              {editing === m.id && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-3 pt-3 border-t border-[#1E2A45] flex items-center gap-3"
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-400 w-20 truncate">{m.home_team}</span>
+                    <button onClick={() => setHomeScore(Math.max(0, homeScore - 1))} className="w-7 h-7 rounded-lg bg-[#0A0E1A] font-bold hover:bg-[#1E2A45]">−</button>
+                    <span className="text-lg font-black w-6 text-center">{homeScore}</span>
+                    <button onClick={() => setHomeScore(homeScore + 1)} className="w-7 h-7 rounded-lg bg-[#0A0E1A] font-bold hover:bg-[#1E2A45]">+</button>
+                  </div>
+                  <span className="text-gray-600 font-black">—</span>
+                  <div className="flex items-center gap-2">
+                    <button onClick={() => setAwayScore(Math.max(0, awayScore - 1))} className="w-7 h-7 rounded-lg bg-[#0A0E1A] font-bold hover:bg-[#1E2A45]">−</button>
+                    <span className="text-lg font-black w-6 text-center">{awayScore}</span>
+                    <button onClick={() => setAwayScore(awayScore + 1)} className="w-7 h-7 rounded-lg bg-[#0A0E1A] font-bold hover:bg-[#1E2A45]">+</button>
+                    <span className="text-xs text-gray-400 w-20 truncate">{m.away_team}</span>
+                  </div>
+                  <button
+                    onClick={() => saveResult(m.id)}
+                    disabled={saving}
+                    className="ml-auto px-4 py-1.5 rounded-xl text-sm font-bold bg-[#00FF87] text-black hover:bg-[#00E077] disabled:opacity-50 flex-shrink-0"
+                  >
+                    {saving ? 'Opslaan...' : 'Opslaan + Score'}
+                  </button>
+                </motion.div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   )
 }

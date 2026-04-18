@@ -1,5 +1,6 @@
 {
   "permissions": {
+    "defaultMode": "bypassPermissions",
     "allow": [
       "Read(//tmp/**)",
       "Bash(powershell -Command \"\\(Get-PSDrive C\\).Free / 1GB\")",
@@ -11,7 +12,17 @@
       "Bash(DATABASE_PROVIDER=sqlite DATABASE_URL=\"file:./prisma/dev.db\" npx prisma generate --schema=./prisma/schema.prisma)",
       "Bash(sed 's/provider = env\\(\"DATABASE_PROVIDER\"\\)/provider = \"sqlite\"/' prisma/schema.prisma)",
       "Bash(DATABASE_URL=\"file:./prisma/dev.db\" npx prisma generate --schema=/tmp/schema_local.prisma)",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(curl -s \"https://football-manager-platform-production.up.railway.app/api/health\")",
+      "Bash(curl -s -X POST \"https://football-manager-platform-production.up.railway.app/api/auth/login\" -H \"Content-Type: application/json\" -d '{\"email\":\"ricardo@test.nl\",\"password\":\"ricardo@test.nl\"}')",
+      "Read(//c/Users/ricar/Downloads/**)",
+      "Bash(grep -n \"socket\\\\|useSocket\\\\|io\\\\.\" c:/Users/ricar/Downloads/football-manager-platform/frontend/hooks/*.ts)",
+      "Bash(grep -l \"mockData\" c:/Users/ricar/Downloads/football-manager-platform/frontend/app/api/*/route.ts)",
+      "Bash(node -e ' *)",
+      "Bash(curl -s --max-time 8 https://football-manager-platform-production.up.railway.app/api/health)",
+      "Bash(curl -s --max-time 8 \"https://football-manager-platform-production.up.railway.app/api/players?limit=3\")",
+      "Bash(curl -s --max-time 8 \"https://football-manager-platform-production.up.railway.app/api/matches/live\")",
+      "Bash(curl -s --max-time 8 -X POST https://football-manager-platform-production.up.railway.app/api/auth/login -H 'Content-Type: application/json' -d '{\"email\":\"ricardo@test.nl\",\"password\":\"ricardo@test.nl\"}')"
     ]
   }
 }
