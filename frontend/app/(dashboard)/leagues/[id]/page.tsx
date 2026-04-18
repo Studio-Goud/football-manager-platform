@@ -105,6 +105,7 @@ interface LeaderboardEntry {
   tier: UserTier
   team_name: string
   total_points: number
+  current_gw_points: number
   is_you: boolean
 }
 
@@ -117,7 +118,7 @@ export default function LeagueDetailPage() {
     queryKey: ['league-leaderboard', id],
     queryFn: async () => {
       const res = await api.get(`/leagues/${id}/leaderboard`)
-      return res.data.data as { league_name: string; leaderboard: LeaderboardEntry[] }
+      return res.data.data as { league_name: string; leaderboard: LeaderboardEntry[]; active_gameweek: number | null }
     },
     enabled: !!id,
   })
@@ -195,8 +196,14 @@ export default function LeagueDetailPage() {
           <span className="text-2xl font-black text-[#00FF87]">#{myEntry.rank}</span>
           <div className="flex-1">
             <p className="font-bold">Jouw positie</p>
-            <p className="text-sm text-gray-400">{myEntry.team_name} · {myEntry.total_points} punten</p>
+            <p className="text-sm text-gray-400">{myEntry.team_name} · {myEntry.total_points} totaal</p>
           </div>
+          {data?.active_gameweek && myEntry.current_gw_points > 0 && (
+            <div className="text-right">
+              <p className="text-[#FFD700] font-bold text-sm">+{myEntry.current_gw_points}</p>
+              <p className="text-[10px] text-gray-500">GW{data.active_gameweek}</p>
+            </div>
+          )}
           <Trophy className="w-6 h-6 text-[#00FF87]" />
         </motion.div>
       )}
@@ -292,7 +299,11 @@ export default function LeagueDetailPage() {
 
                   <div className="text-right flex-shrink-0">
                     <p className="font-bold text-sm">{entry.total_points}</p>
-                    <p className="text-xs text-gray-500">punten</p>
+                    {data?.active_gameweek ? (
+                      <p className="text-[10px] text-[#FFD700]">+{entry.current_gw_points} GW{data.active_gameweek}</p>
+                    ) : (
+                      <p className="text-xs text-gray-500">punten</p>
+                    )}
                   </div>
                   <button
                     onClick={() => setViewTeam({ userId: entry.user_id, username: entry.username })}

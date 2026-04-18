@@ -211,32 +211,46 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
 // GET /leagues/:id/leaderboard — ranglijst van een privé competitie
 router.get('/:id/leaderboard', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
   try {
-    const league = await prisma.privateLeague.findUnique({
-      where: { id: req.params.id },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true, username: true, tier: true,
-                teams: {
-                  orderBy: { created_at: 'desc' },
-                  take: 1,
-                  select: { id: true, name: true, total_points: true, tactic_style: true },
+    const [league, activeGw] = await Promise.all([
+      prisma.privateLeague.findUnique({
+        where: { id: req.params.id },
+        include: {
+          members: {
+            include: {
+              user: {
+                select: {
+                  id: true, username: true, tier: true,
+                  teams: {
+                    orderBy: { created_at: 'desc' },
+                    take: 1,
+                    select: { id: true, name: true, total_points: true, tactic_style: true },
+                  },
                 },
               },
             },
           },
         },
-      },
-    })
+      }),
+      prisma.gameweek.findFirst({ where: { status: 'ACTIVE' }, select: { id: true, number: true } }),
+    ])
 
     if (!league) { sendError(res, 'Niet gevonden', 404); return }
     const isMember = league.members.some(m => m.user_id === req.user!.id)
     if (!isMember) { sendError(res, 'Geen toegang', 403); return }
 
+    // Fetch current GW points for each team if there is an active gameweek
+    let gwPointsMap = new Map<string, number>()
+    if (activeGw) {
+      const teamIds = league.members.flatMap(m => m.user.teams.map(t => t.id))
+      const gwEntries = await prisma.teamGameweek.findMany({
+        where: { gameweek_id: activeGw.id, team_id: { in: teamIds } },
+        select: { team_id: true, points: true },
+      })
+      gwPointsMap = new Map(gwEntries.map(e => [e.team_id, Number(e.points)]))
+    }
+
     const ranked = league.members
-      .map((m, i) => ({
+      .map(m => ({
         rank: 0,
         user_id: m.user.id,
         username: m.user.username,
@@ -244,12 +258,17 @@ router.get('/:id/leaderboard', authenticate, async (req: AuthRequest, res: Respo
         team_name: m.user.teams[0]?.name ?? '—',
         tactic: m.user.teams[0]?.tactic_style ?? 'BALANCED',
         total_points: Number(m.user.teams[0]?.total_points ?? 0),
+        current_gw_points: m.user.teams[0] ? (gwPointsMap.get(m.user.teams[0].id) ?? 0) : 0,
         is_you: m.user.id === req.user!.id,
       }))
       .sort((a, b) => b.total_points - a.total_points)
       .map((m, i) => ({ ...m, rank: i + 1 }))
 
-    sendSuccess(res, { league_name: league.name, leaderboard: ranked })
+    sendSuccess(res, {
+      league_name: league.name,
+      leaderboard: ranked,
+      active_gameweek: activeGw ? activeGw.number : null,
+    })
   } catch {
     sendError(res, 'Ophalen mislukt', 500)
   }
