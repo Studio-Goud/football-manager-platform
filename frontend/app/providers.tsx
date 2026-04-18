@@ -14,7 +14,11 @@ function AutoLogin() {
 
   useEffect(() => {
     if (!isAuthenticated && !isAuthPage) {
-      login('ricardo@test.nl', 'ricardo@test.nl').catch(() => {})
+      login('ricardo@test.nl', 'ricardo@test.nl').then(() => {
+        if (typeof window !== 'undefined' && (window.location.pathname === '/' || window.location.pathname === '/login')) {
+          window.location.replace('/dashboard')
+        }
+      }).catch(() => {})
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])

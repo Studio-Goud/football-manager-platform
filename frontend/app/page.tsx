@@ -1,5 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAuthStore } from '@/store/authStore'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -73,6 +76,15 @@ const mockLeaderboard = [
 ]
 
 export default function LandingPage() {
+  const router = useRouter()
+  const { isAuthenticated } = useAuthStore()
+
+  useEffect(() => {
+    router.replace('/dashboard')
+  }, [router])
+
+  if (isAuthenticated) return null
+
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white overflow-x-hidden">
       {/* Nav */}
