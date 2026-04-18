@@ -430,6 +430,21 @@ server.listen(PORT, async () => {
   logger.info(`🚀 Football Manager API running on port ${PORT}`)
   logger.info(`📡 WebSocket server ready`)
   logger.info(`🗄️  Database: ${process.env.DATABASE_URL?.split('@')[1]?.split('/')[0] ?? 'local'}`)
+
+  // Idempotente schema-migraties — veilig bij elke herstart
+  try {
+    const isPostgres = process.env.DATABASE_PROVIDER === 'postgresql'
+    if (isPostgres) {
+      await prisma.$executeRawUnsafe(`ALTER TABLE users ADD COLUMN IF NOT EXISTS avatar_emoji TEXT NOT NULL DEFAULT '⚽'`)
+    } else {
+      // SQLite: ADD COLUMN IF NOT EXISTS bestaat niet, vang de fout op
+      await prisma.$executeRawUnsafe(`ALTER TABLE users ADD COLUMN avatar_emoji TEXT NOT NULL DEFAULT '⚽'`).catch(() => {})
+    }
+    logger.info('Schema migraties OK')
+  } catch (err) {
+    logger.warn('Schema migratie overgeslagen (kolom bestaat al)', { err })
+  }
+
   await ensureTestAccount()
   await seedDemoData()
 })
