@@ -8,18 +8,35 @@ import { PlayerEventToast } from '@/components/notifications/PlayerEventToast'
 import { useAuthStore } from '@/store/authStore'
 
 function AutoLogin() {
-  const { isAuthenticated, login } = useAuthStore()
+  const { isAuthenticated, login, refreshUser, token } = useAuthStore()
   const pathname = usePathname()
   const isAuthPage = pathname === '/login' || pathname === '/register'
 
   useEffect(() => {
-    if (!isAuthenticated && !isAuthPage) {
-      login('ricardo@test.nl', 'ricardo@test.nl').then(() => {
-        if (typeof window !== 'undefined' && (window.location.pathname === '/' || window.location.pathname === '/login')) {
+    if (isAuthPage) return
+
+    const doLogin = async (attempt = 1) => {
+      try {
+        // Bestaand token valideren
+        if (token) {
+          await refreshUser()
+          return
+        }
+        // Geen token → inloggen met testaccount
+        await login('ricardo@test.nl', 'ricardo@test.nl')
+        if (typeof window !== 'undefined' &&
+          (window.location.pathname === '/' || window.location.pathname === '/login')) {
           window.location.replace('/dashboard')
         }
-      }).catch(() => {})
+      } catch {
+        // Railway kan even opstarten — retry tot 3x met backoff
+        if (attempt < 4) {
+          setTimeout(() => doLogin(attempt + 1), attempt * 2000)
+        }
+      }
     }
+
+    doLogin()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
