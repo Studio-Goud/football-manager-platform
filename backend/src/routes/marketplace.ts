@@ -4,6 +4,7 @@ import prisma from '../config/database'
 import { sendSuccess, sendPaginated, sendError } from '../utils/apiResponse'
 import { authenticate, AuthRequest } from '../middleware/auth'
 import { MARKETPLACE_CONFIG } from '../config/constants'
+import { createNotification } from '../services/notificationService'
 
 const router = Router()
 
@@ -198,6 +199,94 @@ router.post('/:id/buy', authenticate, async (req: AuthRequest, res: Response): P
     sendSuccess(res, null, 'Speler gekocht!')
   } catch {
     sendError(res, 'Aankoop mislukt', 500)
+  }
+})
+
+// POST /marketplace/:id/bid — place a bid on an auction listing
+router.post('/:id/bid', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  const { amount } = req.body
+  if (!amount || isNaN(parseFloat(amount))) {
+    sendError(res, 'Ongeldig bod bedrag', 400)
+    return
+  }
+
+  const bidAmount = parseFloat(amount)
+
+  try {
+    const listing = await prisma.marketplaceListing.findUnique({
+      where: { id: req.params.id },
+      include: { player: true },
+    })
+
+    if (!listing || listing.status !== 'ACTIVE') {
+      sendError(res, 'Veiling niet gevonden of niet actief', 404)
+      return
+    }
+    if (listing.listing_type !== 'AUCTION') {
+      sendError(res, 'Dit is geen veiling', 400)
+      return
+    }
+    if (listing.seller_id === req.user!.id) {
+      sendError(res, 'Je kunt niet op je eigen veiling bieden', 400)
+      return
+    }
+    if (listing.current_bidder_id === req.user!.id) {
+      sendError(res, 'Je hebt al het hoogste bod', 400)
+      return
+    }
+
+    const minBid = listing.current_bid ? Number(listing.current_bid) + 0.5 : Number(listing.price)
+    if (bidAmount < minBid) {
+      sendError(res, `Minimaal bod is ${minBid.toFixed(1)} cr`, 400)
+      return
+    }
+
+    const bidder = await prisma.user.findUnique({ where: { id: req.user!.id } })
+    if (!bidder || Number(bidder.balance_credits) < bidAmount) {
+      sendError(res, 'Onvoldoende saldo', 402)
+      return
+    }
+
+    const previousBidderId = listing.current_bidder_id
+
+    await prisma.marketplaceListing.update({
+      where: { id: listing.id },
+      data: { current_bid: bidAmount, current_bidder_id: req.user!.id },
+    })
+
+    // Notify previous bidder they've been outbid
+    if (previousBidderId) {
+      createNotification(
+        previousBidderId,
+        'DUEL',
+        'Overboden op veiling!',
+        `Je bent overboden op ${listing.player.name}. Huidig bod: ${bidAmount.toFixed(1)} cr`,
+        '/marketplace'
+      ).catch(() => {})
+    }
+
+    sendSuccess(res, { bid: bidAmount }, 'Bod geplaatst!')
+  } catch {
+    sendError(res, 'Bieden mislukt', 500)
+  }
+})
+
+// DELETE /marketplace/:id — cancel own listing
+router.delete('/:id', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const listing = await prisma.marketplaceListing.findUnique({ where: { id: req.params.id } })
+    if (!listing || listing.seller_id !== req.user!.id) {
+      sendError(res, 'Listing niet gevonden', 404)
+      return
+    }
+    if (listing.status !== 'ACTIVE') {
+      sendError(res, 'Listing is niet meer actief', 400)
+      return
+    }
+    await prisma.marketplaceListing.update({ where: { id: listing.id }, data: { status: 'EXPIRED' } })
+    sendSuccess(res, null, 'Listing geannuleerd')
+  } catch {
+    sendError(res, 'Annuleren mislukt', 500)
   }
 })
 

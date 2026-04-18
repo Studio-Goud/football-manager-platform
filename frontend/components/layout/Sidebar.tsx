@@ -16,6 +16,7 @@ import {
   Swords,
   Globe,
   Telescope,
+  Bell,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
@@ -43,6 +44,7 @@ const navItems: NavItem[] = [
   { label: 'Duels', href: '/duels', icon: Swords, badge: 1 },
   { label: 'Competities', href: '/leagues', icon: Globe },
   { label: 'Power-ups', href: '/powerups', icon: Zap },
+  { label: 'Meldingen', href: '/notifications', icon: Bell },
   { label: 'Profiel', href: '/profile', icon: User },
   { label: 'Admin', href: '/admin', icon: Shield, adminOnly: true },
 ]

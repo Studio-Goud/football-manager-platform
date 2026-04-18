@@ -3,7 +3,7 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Users, ShoppingCart, Telescope, User, LayoutDashboard, Grid, Trophy, Swords, Globe, Radio, Zap, X, Award, Target } from 'lucide-react'
+import { Users, ShoppingCart, Telescope, User, LayoutDashboard, Grid, Trophy, Swords, Globe, Radio, Zap, X, Award, Target, Bell } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { useAuthStore } from '@/store/authStore'
 import { useState } from 'react'
@@ -19,13 +19,14 @@ const primaryNav = [
 ]
 
 const moreNav = [
-  { label: 'Live',         href: '/live',        icon: Radio },
-  { label: 'Ranglijst',    href: '/leaderboard', icon: Trophy },
-  { label: 'Duels',        href: '/duels',       icon: Swords },
-  { label: 'Competities',  href: '/leagues',     icon: Globe },
-  { label: 'Power-ups',    href: '/powerups',    icon: Zap },
-  { label: 'Sponsors',     href: '/sponsors',    icon: Award },
-  { label: 'Voorspellen', href: '/predictions', icon: Target },
+  { label: 'Live',          href: '/live',          icon: Radio },
+  { label: 'Ranglijst',     href: '/leaderboard',   icon: Trophy },
+  { label: 'Duels',         href: '/duels',         icon: Swords },
+  { label: 'Competities',   href: '/leagues',       icon: Globe },
+  { label: 'Power-ups',     href: '/powerups',      icon: Zap },
+  { label: 'Sponsors',      href: '/sponsors',      icon: Award },
+  { label: 'Voorspellen',   href: '/predictions',   icon: Target },
+  { label: 'Meldingen',     href: '/notifications', icon: Bell },
 ]
 
 export function BottomNav() {
