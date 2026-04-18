@@ -800,4 +800,79 @@ router.get('/my/season-stats', authenticate, async (req: AuthRequest, res: Respo
   }
 })
 
+// GET /teams/my/gw-preview — speelronde preview met aanstaande wedstrijden + captain suggestie
+router.get('/my/gw-preview', authenticate, async (req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    const team = await prisma.team.findFirst({
+      where: { user_id: req.user!.id, ...(currentSeason ? { season_id: currentSeason.id } : {}) },
+      include: {
+        players: {
+          where: { slot_position: { not: { startsWith: 'BENCH' } } },
+          include: { player: { select: { id: true, name: true, club: true, position: true, form: true, total_points: true, photo_url: true } } },
+        },
+      },
+      orderBy: { created_at: 'desc' },
+    })
+    if (!team) { sendError(res, 'Geen team', 404); return }
+
+    const now = new Date()
+    const in7d = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000)
+
+    const result = await Promise.all(team.players.map(async tp => {
+      const player = tp.player
+      if (!player) return null
+
+      const nextMatch = await prisma.match.findFirst({
+        where: {
+          OR: [{ home_team: player.club }, { away_team: player.club }],
+          kickoff: { gte: now, lte: in7d },
+        },
+        orderBy: { kickoff: 'asc' },
+      })
+
+      const is_home = nextMatch ? nextMatch.home_team === player.club : false
+      const opponent = nextMatch ? (is_home ? nextMatch.away_team : nextMatch.home_team) : null
+
+      // Simple difficulty: home = easier, away = harder; adjust by position
+      const base_difficulty = is_home ? 3 : 4
+      const form = Number(player.form)
+      const captain_score = form * 1.5 + Number(player.total_points) * 0.1 + (is_home ? 1 : 0)
+
+      return {
+        player_id: player.id,
+        player_name: player.name,
+        position: player.position,
+        club: player.club,
+        photo_url: player.photo_url,
+        form: Math.round(form * 10) / 10,
+        total_points: Number(player.total_points),
+        is_captain: tp.is_captain,
+        is_vice_captain: tp.is_vice_captain,
+        next_fixture: nextMatch ? {
+          opponent,
+          is_home,
+          kickoff: nextMatch.kickoff.toISOString(),
+          difficulty: base_difficulty,
+        } : null,
+        captain_score: Math.round(captain_score * 10) / 10,
+      }
+    }))
+
+    const players = result.filter(Boolean) as NonNullable<typeof result[0]>[]
+    players.sort((a, b) => b!.captain_score - a!.captain_score)
+
+    const suggestedCaptain = players[0] ?? null
+    const suggestedViceCaptain = players[1] ?? null
+
+    sendSuccess(res, {
+      players,
+      suggested_captain: suggestedCaptain?.player_id ?? null,
+      suggested_vice_captain: suggestedViceCaptain?.player_id ?? null,
+    })
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
 export default router

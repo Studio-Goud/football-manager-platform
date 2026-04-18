@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Save, RefreshCw, Info, Lock, ArrowUpRight, ArrowDownLeft, History } from 'lucide-react'
-import { useQuery } from '@tanstack/react-query'
+import { Save, RefreshCw, Info, Lock, ArrowUpRight, ArrowDownLeft, History, Crown, Star } from 'lucide-react'
+import { useQuery, useMutation } from '@tanstack/react-query'
 import { useTeamStore } from '@/store/teamStore'
 import { Formation, Player, TeamPlayer } from '@/types'
 import { PitchView } from '@/components/team/PitchView'
@@ -47,6 +47,34 @@ export default function TeamPage() {
       return res.data.data as TransferEntry[]
     },
     staleTime: 30000,
+  })
+
+  interface GwPreviewPlayer {
+    player_id: number
+    player_name: string
+    position: string
+    club: string
+    photo_url: string | null
+    form: number
+    total_points: number
+    is_captain: boolean
+    is_vice_captain: boolean
+    captain_score: number
+    next_fixture: { opponent: string; is_home: boolean; kickoff: string; difficulty: number } | null
+  }
+  interface GwPreview {
+    players: GwPreviewPlayer[]
+    suggested_captain: number | null
+    suggested_vice_captain: number | null
+  }
+  const { data: gwPreview } = useQuery<GwPreview>({
+    queryKey: ['gw-preview'],
+    queryFn: async () => {
+      const res = await api.get('/teams/my/gw-preview')
+      return res.data.data
+    },
+    enabled: !!team,
+    staleTime: 120000,
   })
 
   const isDeadlinePassed = gameweek?.deadline ? new Date(gameweek.deadline) < new Date() : false
@@ -394,6 +422,52 @@ export default function TeamPage() {
                   </div>
                 </div>
               </div>
+            </Card>
+          )}
+
+          {/* Captain suggestion */}
+          {gwPreview && (gwPreview.suggested_captain || gwPreview.suggested_vice_captain) && (
+            <Card className="p-4">
+              <div className="flex items-center gap-2 mb-3">
+                <Crown className="w-4 h-4 text-[#FFD700]" />
+                <h3 className="font-bold text-sm">Aanvoerder Suggestie</h3>
+              </div>
+              <div className="space-y-2">
+                {gwPreview.players.slice(0, 3).map((p, i) => {
+                  const isSuggestedC = p.player_id === gwPreview.suggested_captain
+                  const isSuggestedVC = p.player_id === gwPreview.suggested_vice_captain
+                  if (!isSuggestedC && !isSuggestedVC) return null
+                  const teamPlayer = players.find(tp => (tp as any).player_id === p.player_id || (tp as any).player?.id === p.player_id)
+                  return (
+                    <div key={p.player_id} className={`flex items-center gap-3 p-2.5 rounded-xl ${isSuggestedC ? 'bg-[#FFD700]/10 border border-[#FFD700]/20' : 'bg-[#3B82F6]/10 border border-[#3B82F6]/20'}`}>
+                      <div className="w-8 h-8 rounded-full bg-[#1E2A45] overflow-hidden flex-shrink-0 flex items-center justify-center">
+                        {p.photo_url
+                          ? <img src={p.photo_url} alt={p.player_name} className="w-full h-full object-cover" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                          : <span className="text-[10px] text-gray-400">{p.position[0]}</span>
+                        }
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold truncate">{p.player_name.split(' ').pop()}</p>
+                        <p className="text-[10px] text-gray-500">Form {p.form} · {p.next_fixture ? (p.next_fixture.is_home ? '🏠' : '✈️') + ' ' + p.next_fixture.opponent : 'Geen wedstrijd'}</p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={`text-[10px] font-black px-1.5 py-0.5 rounded ${isSuggestedC ? 'bg-[#FFD700] text-black' : 'bg-[#3B82F6] text-white'}`}>
+                          {isSuggestedC ? 'C' : 'VC'}
+                        </span>
+                        {teamPlayer && !isSuggestedC && !p.is_captain && (
+                          <button
+                            onClick={() => teamPlayer && handleSetCaptain(teamPlayer as any)}
+                            className="text-[10px] text-[#FFD700] hover:underline"
+                          >
+                            Instellen
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+              <p className="text-[10px] text-gray-600 mt-2">Gebaseerd op form + aankomende wedstrijd</p>
             </Card>
           )}
 
