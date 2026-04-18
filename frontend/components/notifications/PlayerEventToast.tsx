@@ -12,7 +12,8 @@ interface PlayerEvent {
   event_type: string
   minute: number
   points_awarded: number
-  team_player?: boolean // is this player in MY team?
+  photo_url?: string | null
+  team_player?: boolean
 }
 
 const EVENT_EMOJIS: Record<string, string> = {
@@ -70,7 +71,16 @@ export function PlayerEventToast() {
           }`}
           style={{ minWidth: 260, maxWidth: 320 }}
         >
-          <span className="text-2xl">{emoji}</span>
+          {event.photo_url ? (
+            <img
+              src={event.photo_url}
+              alt={name}
+              className="w-10 h-10 rounded-full object-cover flex-shrink-0 border border-[#1E2A45]"
+              onError={e => { (e.target as HTMLImageElement).style.display = 'none' }}
+            />
+          ) : (
+            <span className="text-2xl flex-shrink-0">{emoji}</span>
+          )}
           <div className="flex-1 min-w-0">
             <p className="text-xs text-gray-400">{label} · {event.minute}'</p>
             <p className="font-black text-sm text-white truncate">{name}</p>
