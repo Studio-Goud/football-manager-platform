@@ -2,7 +2,7 @@ import { Router, Response } from 'express'
 import prisma from '../config/database'
 import { sendSuccess, sendError } from '../utils/apiResponse'
 import { authenticate, AuthRequest } from '../middleware/auth'
-import { fetchLiveMatches, fetchTodayFixtures } from '../services/footballApiService'
+import { fetchLiveMatches, fetchTodayFixtures, fetchWeekFixtures } from '../services/footballApiService'
 import { nextTickAt } from '../services/simulationService'
 
 const router = Router()
@@ -74,6 +74,16 @@ router.get('/live', authenticate, async (req: AuthRequest, res: Response): Promi
 router.get('/today', authenticate, async (_req: AuthRequest, res: Response): Promise<void> => {
   try {
     const fixtures = await fetchTodayFixtures()
+    sendSuccess(res, fixtures)
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// GET /matches/week — wedstrijden vandaag + komende 3 dagen (gecached 5 min)
+router.get('/week', authenticate, async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const fixtures = await fetchWeekFixtures()
     sendSuccess(res, fixtures)
   } catch {
     sendError(res, 'Ophalen mislukt', 500)

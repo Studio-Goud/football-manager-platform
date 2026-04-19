@@ -403,4 +403,65 @@ router.post('/invalidate-cache', async (_req: AuthRequest, res: Response): Promi
   sendSuccess(res, null, 'Wedstrijd cache geleegd — volgende request haalt verse data op')
 })
 
+// POST /admin/gameweeks/extend-deadline — verleng actieve GW deadline met 7 dagen
+router.post('/gameweeks/extend-deadline', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const season = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    if (!season) { sendError(res, 'Geen actief seizoen', 404); return }
+
+    const gw = await prisma.gameweek.findFirst({
+      where: { season_id: season.id, status: 'ACTIVE' },
+      orderBy: { number: 'desc' },
+    })
+    if (!gw) { sendError(res, 'Geen actieve speelronde', 404); return }
+
+    const newDeadline = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+    await prisma.gameweek.update({
+      where: { id: gw.id },
+      data: { deadline: newDeadline },
+    })
+    sendSuccess(res, { deadline: newDeadline }, `GW${gw.number} deadline verlengd naar ${newDeadline.toLocaleDateString('nl-NL')}`)
+  } catch {
+    sendError(res, 'Verlengen mislukt', 500)
+  }
+})
+
+// POST /admin/seed-marketplace — voeg demo listings toe zodat markt niet leeg is
+router.post('/seed-marketplace', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const players = await prisma.player.findMany({
+      where: { availability: 'AVAILABLE' },
+      orderBy: { form: 'desc' },
+      take: 20,
+    })
+    if (players.length === 0) { sendError(res, 'Geen spelers beschikbaar — sync eerst', 400); return }
+
+    // Gebruik testaccount als verkoper
+    const seller = await prisma.user.findFirst({ where: { is_admin: true } })
+    if (!seller) { sendError(res, 'Geen admin user gevonden', 404); return }
+
+    let created = 0
+    for (const player of players.slice(0, 10)) {
+      const existing = await prisma.marketplaceListing.findFirst({
+        where: { player_id: player.id, status: 'ACTIVE' },
+      })
+      if (existing) continue
+
+      await prisma.marketplaceListing.create({
+        data: {
+          seller_id: seller.id,
+          player_id: player.id,
+          listing_type: 'FIXED',
+          price: Number(player.price) * 1.05,
+          status: 'ACTIVE',
+        },
+      })
+      created++
+    }
+    sendSuccess(res, { created }, `${created} demo listings aangemaakt op de markt`)
+  } catch {
+    sendError(res, 'Seeden mislukt', 500)
+  }
+})
+
 export default router

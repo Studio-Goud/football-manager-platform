@@ -54,11 +54,6 @@ let liveCache: { data: unknown[]; ts: number } | null = null
 let todayCache: { data: unknown[]; ts: number } | null = null
 const CACHE_TTL = 60_000
 
-export function invalidateFixtureCache() {
-  liveCache = null
-  todayCache = null
-}
-
 // ─── Fetch live matches (alle grote competities, gecached) ────────────────────
 
 export async function fetchLiveMatches() {
@@ -145,6 +140,65 @@ export async function fetchTodayFixtures() {
   } catch (err) {
     logger.error('Failed to fetch today fixtures', { err })
     return todayCache?.data ?? []
+  }
+}
+
+// ─── Fetch upcoming fixtures (vandaag + komende 3 dagen) ─────────────────────
+
+let weekCache: { data: unknown[]; ts: number } | null = null
+
+export function invalidateFixtureCache() {
+  liveCache = null
+  todayCache = null
+  weekCache = null
+}
+
+export async function fetchWeekFixtures() {
+  if (weekCache && Date.now() - weekCache.ts < 300_000) return weekCache.data
+
+  const knownIds = new Set(Object.values(COMPETITIONS).map(c => c.id))
+  const allFixtures: unknown[] = []
+
+  const today = new Date()
+  const dates = [0, 1, 2, 3].map(d => {
+    const dt = new Date(today)
+    dt.setDate(today.getDate() + d)
+    return dt.toISOString().split('T')[0]
+  })
+
+  try {
+    for (const date of dates) {
+      const response = await apiClient.get('/fixtures', { params: { date } })
+      const raw: unknown[] = response.data.response ?? []
+      for (const f of raw as any[]) {
+        const leagueId: number = f.league?.id
+        const meta = COMPETITION_BY_ID[leagueId] ?? null
+        if (!meta || !knownIds.has(leagueId)) continue
+        allFixtures.push({
+          fixture_id:  f.fixture?.id,
+          home_team:   f.teams?.home?.name ?? '',
+          home_logo:   f.teams?.home?.logo ?? '',
+          away_team:   f.teams?.away?.name ?? '',
+          away_logo:   f.teams?.away?.logo ?? '',
+          home_score:  f.goals?.home,
+          away_score:  f.goals?.away,
+          kickoff:     f.fixture?.date,
+          status:      f.fixture?.status?.short ?? 'NS',
+          minute:      f.fixture?.status?.elapsed,
+          league_id:   leagueId,
+          league_name: meta.name,
+          league_flag: meta.flag,
+          date,
+        })
+      }
+      // kleine pauze tussen API calls
+      await new Promise(r => setTimeout(r, 200))
+    }
+    weekCache = { data: allFixtures, ts: Date.now() }
+    return allFixtures
+  } catch (err) {
+    logger.error('Failed to fetch week fixtures', { err })
+    return weekCache?.data ?? todayCache?.data ?? []
   }
 }
 
