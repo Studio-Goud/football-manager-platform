@@ -101,10 +101,9 @@ export default function AdminPage() {
     toast.success(`✅ ${res.data?.data?.count ?? 0} achievements aangemaakt`, { duration: 4000 })
   })
 
-  const seedCompetitions = () => doAction('Competities zaai', async () => {
-    const res = await api.post('/admin/seed-competitions')
-    const r = res.data?.data
-    toast.success(`✅ ${r?.leagues ?? 0} leagues, ${r?.users ?? 0} gebruikers, ${r?.teams ?? 0} teams aangemaakt`, { duration: 5000 })
+  const invalidateCache = () => doAction('Cache legen', async () => {
+    await api.post('/admin/invalidate-cache')
+    toast.success('✅ Wedstrijd cache geleegd — KNVB Beker & live scores verversen direct', { duration: 5000 })
   })
 
   const createSeason = () => doAction('Seizoen aanmaken', () =>
@@ -194,15 +193,24 @@ export default function AdminPage() {
       {tab === 'overview' && (
         <div className="grid md:grid-cols-2 gap-4">
           <Card className="p-5">
-            <h2 className="font-bold mb-4">Snelle acties</h2>
+            <h2 className="font-bold mb-3">⚡ Live data</h2>
             <div className="space-y-3">
-              <Button onClick={seedDemo} loading={actionLoading === 'Demo seed'} className="w-full" variant="secondary">
-                <Database className="w-4 h-4 mr-2" />
-                Demo spelers zaai (snelle fix)
+              <Button onClick={invalidateCache} loading={actionLoading === 'Cache legen'} className="w-full bg-[#00FF87] text-black hover:bg-[#00CC6A]">
+                <RefreshCw className="w-4 h-4 mr-2" />
+                Wedstrijden verversen (KNVB Beker / live)
               </Button>
               <Button onClick={syncPlayers} loading={actionLoading === 'Spelers synchroniseren'} className="w-full" variant="secondary">
                 <RefreshCw className="w-4 h-4 mr-2" />
-                Spelers synchroniseren (API)
+                Spelers synchroniseren vanuit API (~2 min)
+              </Button>
+            </div>
+          </Card>
+          <Card className="p-5">
+            <h2 className="font-bold mb-3">🗄️ Database</h2>
+            <div className="space-y-3">
+              <Button onClick={seedDemo} loading={actionLoading === 'Demo seed'} className="w-full" variant="secondary">
+                <Database className="w-4 h-4 mr-2" />
+                Demo spelers zaai (als database leeg is)
               </Button>
               <Button onClick={createSeason} loading={actionLoading === 'Seizoen aanmaken'} className="w-full" variant="secondary">
                 <Trophy className="w-4 h-4 mr-2" />
@@ -216,9 +224,9 @@ export default function AdminPage() {
                 <Trophy className="w-4 h-4 mr-2" />
                 Achievements zaai (badges)
               </Button>
-              <Button onClick={seedCompetitions} loading={actionLoading === 'Competities zaai'} className="w-full" variant="secondary">
-                <Users className="w-4 h-4 mr-2" />
-                Test competities zaai (4 leagues + nepspelers)
+              <Button onClick={seedAchievements} loading={actionLoading === 'Achievements zaai'} className="w-full" variant="secondary">
+                <Trophy className="w-4 h-4 mr-2" />
+                Achievements zaai (badges)
               </Button>
             </div>
           </Card>

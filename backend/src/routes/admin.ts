@@ -5,9 +5,9 @@ import { authenticate, requireAdmin, AuthRequest } from '../middleware/auth'
 import { syncEredivisiePlayers } from '../services/syncPlayersService'
 import { processSeasonEndRewards, giveNewSeasonBonus } from '../services/seasonRewardService'
 import { seedDemoDataForce } from '../seed-demo'
-import { seedCompetities } from '../seed-competitions'
 import { fixTeamForUser } from '../services/simulationService'
 import { seedAchievements } from '../services/achievementService'
+import { invalidateFixtureCache } from '../services/footballApiService'
 import logger from '../config/logger'
 
 const router = Router()
@@ -165,16 +165,7 @@ router.post('/seed-demo', async (_req: AuthRequest, res: Response): Promise<void
   }
 })
 
-// POST /admin/seed-competitions — maak 4 testcompetities met nepgebruikers aan
-router.post('/seed-competitions', async (_req: AuthRequest, res: Response): Promise<void> => {
-  try {
-    const result = await seedCompetities()
-    sendSuccess(res, result, `Competitie-seed klaar: ${result.leagues} leagues, ${result.users} nieuwe gebruikers, ${result.teams} teams`)
-  } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : 'Onbekende fout'
-    sendError(res, `Seed mislukt: ${msg}`, 500)
-  }
-})
+// POST /admin/seed-competitions verwijderd (seedCompetities niet meer in gebruik)
 
 // POST /admin/sync-players/await — sync en wacht op resultaat
 router.post('/sync-players/await', async (_req: AuthRequest, res: Response): Promise<void> => {
@@ -404,6 +395,12 @@ router.post('/gameweeks/create', async (_req: AuthRequest, res: Response): Promi
   } catch {
     sendError(res, 'Aanmaken mislukt', 500)
   }
+})
+
+// POST /admin/invalidate-cache — leeg wedstrijd cache (toont KNVB Beker e.a. direct)
+router.post('/invalidate-cache', async (_req: AuthRequest, res: Response): Promise<void> => {
+  invalidateFixtureCache()
+  sendSuccess(res, null, 'Wedstrijd cache geleegd — volgende request haalt verse data op')
 })
 
 export default router

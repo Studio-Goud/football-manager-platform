@@ -22,11 +22,19 @@ export const COMPETITIONS: Record<string, { id: number; name: string; country: s
   bundesliga:        { id: 78,  name: 'Bundesliga',         country: 'Germany',     flag: '🇩🇪' },
   serie_a:           { id: 135, name: 'Serie A',            country: 'Italy',       flag: '🇮🇹' },
   ligue_1:           { id: 61,  name: 'Ligue 1',            country: 'France',      flag: '🇫🇷' },
-  // Andere top liga's
+  // Nederlandse competities
   eredivisie:        { id: 88,  name: 'Eredivisie',         country: 'Netherlands', flag: '🇳🇱' },
+  knvb_beker:        { id: 90,  name: 'KNVB Beker',         country: 'Netherlands', flag: '🏆' },
+  keuken_kampioen:   { id: 89,  name: 'Keuken Kampioen Div',country: 'Netherlands', flag: '🇳🇱' },
+  // Andere top liga's
   primeira_liga:     { id: 94,  name: 'Primeira Liga',      country: 'Portugal',    flag: '🇵🇹' },
   pro_league:        { id: 144, name: 'Pro League',         country: 'Belgium',     flag: '🇧🇪' },
   super_lig:         { id: 203, name: 'Süper Lig',          country: 'Turkey',      flag: '🇹🇷' },
+  // Nationale bekers
+  fa_cup:            { id: 45,  name: 'FA Cup',             country: 'England',     flag: '🏴󠁧󠁢󠁥󠁮󠁧󠁿' },
+  copa_del_rey:      { id: 143, name: 'Copa del Rey',       country: 'Spain',       flag: '🇪🇸' },
+  dfb_pokal:         { id: 81,  name: 'DFB Pokal',          country: 'Germany',     flag: '🇩🇪' },
+  coppa_italia:      { id: 137, name: 'Coppa Italia',       country: 'Italy',       flag: '🇮🇹' },
   // Europese cups
   champions_league:  { id: 2,   name: 'Champions League',  country: 'Europe',      flag: '⭐' },
   europa_league:     { id: 3,   name: 'Europa League',      country: 'Europe',      flag: '🟠' },
@@ -43,7 +51,13 @@ const COMPETITION_BY_ID: Record<number, { name: string; flag: string }> =
 // ─── In-memory cache (60 seconden) zodat we niet 1440 calls/dag verbruiken ────
 
 let liveCache: { data: unknown[]; ts: number } | null = null
+let todayCache: { data: unknown[]; ts: number } | null = null
 const CACHE_TTL = 60_000
+
+export function invalidateFixtureCache() {
+  liveCache = null
+  todayCache = null
+}
 
 // ─── Fetch live matches (alle grote competities, gecached) ────────────────────
 
@@ -90,8 +104,6 @@ export async function fetchLiveMatches() {
 }
 
 // ─── Fetch today fixtures voor dashboard (1 API call via date param) ──────────
-
-let todayCache: { data: unknown[]; ts: number } | null = null
 
 export async function fetchTodayFixtures() {
   if (todayCache && Date.now() - todayCache.ts < 300_000) return todayCache.data // 5 min cache
