@@ -106,6 +106,12 @@ export default function AdminPage() {
     toast.success('✅ Wedstrijd cache geleegd — KNVB Beker & live scores verversen direct', { duration: 5000 })
   })
 
+  const bootstrapAll = () => doAction('Bootstrap', async () => {
+    const res = await api.post('/admin/bootstrap-all')
+    const r = res.data?.data
+    toast.success(`✅ ${r?.players_created} spelers · GW${r?.gameweek?.replace('GW','')} actief · ${r?.marketplace_listings} listings`, { duration: 8000 })
+  })
+
   const extendDeadline = () => doAction('Deadline verlengen', async () => {
     const res = await api.post('/admin/gameweeks/extend-deadline')
     const r = res.data?.data
@@ -207,6 +213,10 @@ export default function AdminPage() {
           <Card className="p-5">
             <h2 className="font-bold mb-3">⚡ Live data</h2>
             <div className="space-y-3">
+              <Button onClick={bootstrapAll} loading={actionLoading === 'Bootstrap'} className="w-full bg-[#FFD700] text-black hover:bg-[#F59E0B] font-black text-base py-3">
+                <Zap className="w-5 h-5 mr-2" />
+                🚀 Bootstrap alles (spelers + seizoen + markt)
+              </Button>
               <Button onClick={invalidateCache} loading={actionLoading === 'Cache legen'} className="w-full bg-[#00FF87] text-black hover:bg-[#00CC6A]">
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Wedstrijden verversen (KNVB Beker / live)

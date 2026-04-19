@@ -465,4 +465,208 @@ router.post('/seed-marketplace', async (_req: AuthRequest, res: Response): Promi
   }
 })
 
+// POST /admin/bootstrap-all — vult het platform met 100 Eredivisie spelers + seizoen + markt
+router.post('/bootstrap-all', async (_req: AuthRequest, res: Response): Promise<void> => {
+  try {
+    const eredivisieClubs = [
+      { name: 'Ajax', abbr: 'AJX' },
+      { name: 'PSV', abbr: 'PSV' },
+      { name: 'Feyenoord', abbr: 'FEY' },
+      { name: 'AZ', abbr: 'AZ' },
+      { name: 'FC Utrecht', abbr: 'UTR' },
+      { name: 'FC Twente', abbr: 'TWE' },
+      { name: 'Vitesse', abbr: 'VIT' },
+      { name: 'SC Heerenveen', abbr: 'HEE' },
+      { name: 'Sparta Rotterdam', abbr: 'SPA' },
+      { name: 'NEC Nijmegen', abbr: 'NEC' },
+    ]
+
+    const playerTemplates: { name: string; display_name: string; position: string; price: number; form: number; club: string }[] = [
+      // Ajax
+      { name: 'Remko Pasveer', display_name: 'Pasveer', position: 'GK', price: 5.0, form: 6.8, club: 'Ajax' },
+      { name: 'Devyne Rensch', display_name: 'Rensch', position: 'DEF', price: 6.5, form: 7.1, club: 'Ajax' },
+      { name: 'Jorrel Hato', display_name: 'Hato', position: 'DEF', price: 7.5, form: 7.5, club: 'Ajax' },
+      { name: 'Youri Baas', display_name: 'Baas', position: 'DEF', price: 5.5, form: 6.5, club: 'Ajax' },
+      { name: 'Branco van den Boomen', display_name: 'Van den Boomen', position: 'MID', price: 8.0, form: 7.8, club: 'Ajax' },
+      { name: 'Kenneth Taylor', display_name: 'Taylor', position: 'MID', price: 7.5, form: 7.4, club: 'Ajax' },
+      { name: 'Kian Fitz-Jim', display_name: 'Fitz-Jim', position: 'MID', price: 7.0, form: 7.2, club: 'Ajax' },
+      { name: 'Wout Weghorst', display_name: 'Weghorst', position: 'FWD', price: 10.5, form: 8.2, club: 'Ajax' },
+      { name: 'Bertrand Traoré', display_name: 'Traoré', position: 'FWD', price: 9.0, form: 7.9, club: 'Ajax' },
+      { name: 'Chuba Akpom', display_name: 'Akpom', position: 'FWD', price: 9.5, form: 8.0, club: 'Ajax' },
+      // PSV
+      { name: 'Walter Benítez', display_name: 'Benítez', position: 'GK', price: 6.5, form: 7.5, club: 'PSV' },
+      { name: 'Rick Karsdorp', display_name: 'Karsdorp', position: 'DEF', price: 6.0, form: 7.0, club: 'PSV' },
+      { name: 'Ryan Flamingo', display_name: 'Flamingo', position: 'DEF', price: 7.0, form: 7.3, club: 'PSV' },
+      { name: 'Olivier Boscagli', display_name: 'Boscagli', position: 'DEF', price: 6.5, form: 7.1, club: 'PSV' },
+      { name: 'Guus Til', display_name: 'Til', position: 'MID', price: 8.5, form: 8.0, club: 'PSV' },
+      { name: 'Joey Veerman', display_name: 'Veerman', position: 'MID', price: 9.0, form: 8.3, club: 'PSV' },
+      { name: 'Malik Tillman', display_name: 'Tillman', position: 'MID', price: 8.5, form: 7.9, club: 'PSV' },
+      { name: 'Luuk de Jong', display_name: 'De Jong', position: 'FWD', price: 11.0, form: 8.8, club: 'PSV' },
+      { name: 'Ricardo Pepi', display_name: 'Pepi', position: 'FWD', price: 9.5, form: 8.1, club: 'PSV' },
+      { name: 'Johan Bakayoko', display_name: 'Bakayoko', position: 'FWD', price: 10.0, form: 8.5, club: 'PSV' },
+      // Feyenoord
+      { name: 'Timon Wellenreuther', display_name: 'Wellenreuther', position: 'GK', price: 5.5, form: 7.0, club: 'Feyenoord' },
+      { name: 'Bart Nieuwkoop', display_name: 'Nieuwkoop', position: 'DEF', price: 5.5, form: 6.8, club: 'Feyenoord' },
+      { name: 'Gernot Trauner', display_name: 'Trauner', position: 'DEF', price: 6.5, form: 7.2, club: 'Feyenoord' },
+      { name: 'David Hancko', display_name: 'Hancko', position: 'DEF', price: 7.5, form: 7.6, club: 'Feyenoord' },
+      { name: 'Quinten Timber', display_name: 'Q.Timber', position: 'MID', price: 8.0, form: 7.8, club: 'Feyenoord' },
+      { name: 'Gjivai Zechiël', display_name: 'Zechiël', position: 'MID', price: 7.5, form: 7.5, club: 'Feyenoord' },
+      { name: 'Ramiz Zerrouki', display_name: 'Zerrouki', position: 'MID', price: 7.0, form: 7.3, club: 'Feyenoord' },
+      { name: 'Santiago Giménez', display_name: 'Giménez', position: 'FWD', price: 12.0, form: 9.1, club: 'Feyenoord' },
+      { name: 'Ayase Ueda', display_name: 'Ueda', position: 'FWD', price: 10.0, form: 8.2, club: 'Feyenoord' },
+      { name: 'Igor Paixão', display_name: 'Paixão', position: 'FWD', price: 9.5, form: 8.3, club: 'Feyenoord' },
+      // AZ
+      { name: 'Rome-Jaylen Owusu-Oduro', display_name: 'Owusu-Oduro', position: 'GK', price: 5.0, form: 6.5, club: 'AZ' },
+      { name: 'Maximiliano Wittek', display_name: 'Wittek', position: 'DEF', price: 5.5, form: 6.7, club: 'AZ' },
+      { name: 'Theo Malezyeux', display_name: 'Malezyeux', position: 'DEF', price: 5.5, form: 6.6, club: 'AZ' },
+      { name: 'Milos Kerkez', display_name: 'Kerkez', position: 'DEF', price: 7.0, form: 7.4, club: 'AZ' },
+      { name: 'Tijjani Reijnders', display_name: 'Reijnders', position: 'MID', price: 9.5, form: 8.4, club: 'AZ' },
+      { name: 'Sven Mijnans', display_name: 'Mijnans', position: 'MID', price: 7.0, form: 7.2, club: 'AZ' },
+      { name: 'Dani de Wit', display_name: 'De Wit', position: 'MID', price: 7.5, form: 7.5, club: 'AZ' },
+      { name: 'Vangelis Pavlidis', display_name: 'Pavlidis', position: 'FWD', price: 11.5, form: 9.0, club: 'AZ' },
+      { name: 'Jens Odgaard', display_name: 'Odgaard', position: 'FWD', price: 9.0, form: 7.9, club: 'AZ' },
+      { name: 'Mees Römer', display_name: 'Römer', position: 'FWD', price: 7.5, form: 7.3, club: 'AZ' },
+      // FC Utrecht
+      { name: 'Vasilis Barkas', display_name: 'Barkas', position: 'GK', price: 5.0, form: 6.6, club: 'FC Utrecht' },
+      { name: 'Souffian El Karouani', display_name: 'El Karouani', position: 'DEF', price: 5.5, form: 6.8, club: 'FC Utrecht' },
+      { name: 'Jens Toornstra', display_name: 'Toornstra', position: 'MID', price: 7.0, form: 7.3, club: 'FC Utrecht' },
+      { name: 'Django Warmerdam', display_name: 'Warmerdam', position: 'MID', price: 6.5, form: 7.0, club: 'FC Utrecht' },
+      { name: 'Anastasios Douvikas', display_name: 'Douvikas', position: 'FWD', price: 9.5, form: 8.2, club: 'FC Utrecht' },
+      // FC Twente
+      { name: 'Lars Unnerstall', display_name: 'Unnerstall', position: 'GK', price: 5.5, form: 7.1, club: 'FC Twente' },
+      { name: 'Mees Hilgers', display_name: 'Hilgers', position: 'DEF', price: 6.5, form: 7.3, club: 'FC Twente' },
+      { name: 'Sem Steijn', display_name: 'Steijn', position: 'MID', price: 8.5, form: 8.1, club: 'FC Twente' },
+      { name: 'Michel Vlap', display_name: 'Vlap', position: 'MID', price: 7.5, form: 7.6, club: 'FC Twente' },
+      { name: 'Ricky van Wolfswinkel', display_name: 'Van Wolfswinkel', position: 'FWD', price: 8.5, form: 7.8, club: 'FC Twente' },
+      // Vitesse
+      { name: 'Markus Schubert', display_name: 'Schubert', position: 'GK', price: 4.5, form: 6.2, club: 'Vitesse' },
+      { name: 'Bram Nuytinck', display_name: 'Nuytinck', position: 'DEF', price: 5.0, form: 6.4, club: 'Vitesse' },
+      { name: 'Million Manhoef', display_name: 'Manhoef', position: 'MID', price: 7.0, form: 7.2, club: 'Vitesse' },
+      { name: 'Loïs Openda', display_name: 'Openda', position: 'FWD', price: 10.5, form: 8.6, club: 'Vitesse' },
+      { name: 'Lois Openda', display_name: 'Openda Jr', position: 'FWD', price: 8.0, form: 7.5, club: 'Vitesse' },
+      // SC Heerenveen
+      { name: 'Andries Noppert', display_name: 'Noppert', position: 'GK', price: 5.5, form: 7.0, club: 'SC Heerenveen' },
+      { name: 'Sven van Beek', display_name: 'Van Beek', position: 'DEF', price: 5.5, form: 6.8, club: 'SC Heerenveen' },
+      { name: 'Damie van den Bemd', display_name: 'Van den Bemd', position: 'MID', price: 6.0, form: 6.9, club: 'SC Heerenveen' },
+      { name: 'Amin Sarr', display_name: 'Sarr', position: 'FWD', price: 8.5, form: 7.7, club: 'SC Heerenveen' },
+      { name: 'Sydney van Hooijdonk', display_name: 'Van Hooijdonk', position: 'FWD', price: 9.0, form: 8.0, club: 'SC Heerenveen' },
+      // Sparta Rotterdam
+      { name: 'Nick Olij', display_name: 'Olij', position: 'GK', price: 5.0, form: 6.7, club: 'Sparta Rotterdam' },
+      { name: 'Adil Auassar', display_name: 'Auassar', position: 'MID', price: 6.5, form: 7.0, club: 'Sparta Rotterdam' },
+      { name: 'Tobias Lauritsen', display_name: 'Lauritsen', position: 'FWD', price: 8.0, form: 7.6, club: 'Sparta Rotterdam' },
+      { name: 'Arno Verschueren', display_name: 'Verschueren', position: 'MID', price: 6.0, form: 6.8, club: 'Sparta Rotterdam' },
+      // NEC Nijmegen
+      { name: 'Robin Roefs', display_name: 'Roefs', position: 'GK', price: 5.0, form: 6.5, club: 'NEC Nijmegen' },
+      { name: 'Calvin Verdonk', display_name: 'Verdonk', position: 'DEF', price: 5.5, form: 6.7, club: 'NEC Nijmegen' },
+      { name: 'Bart van Rooij', display_name: 'Van Rooij', position: 'MID', price: 6.5, form: 7.0, club: 'NEC Nijmegen' },
+      { name: 'Lasse Schöne', display_name: 'Schöne', position: 'MID', price: 7.0, form: 7.2, club: 'NEC Nijmegen' },
+      { name: 'Elayis Tavsan', display_name: 'Tavsan', position: 'FWD', price: 8.0, form: 7.5, club: 'NEC Nijmegen' },
+    ]
+
+    let playersCreated = 0
+    let playersSkipped = 0
+
+    for (const p of playerTemplates) {
+      const existing = await prisma.player.findFirst({ where: { name: p.name } })
+      if (existing) { playersSkipped++; continue }
+      await prisma.player.create({
+        data: {
+          name: p.name,
+          display_name: p.display_name,
+          position: p.position,
+          club: p.club,
+          price: p.price,
+          form: p.form,
+          availability: 'AVAILABLE',
+          nationality: 'Netherlands',
+          goals: Math.floor(Math.random() * 8),
+          assists: Math.floor(Math.random() * 10),
+          yellow_cards: Math.floor(Math.random() * 4),
+          red_cards: 0,
+          total_points: Math.floor(Math.random() * 80) + 20,
+          ownership_percent: Math.random() * 40,
+        },
+      })
+      playersCreated++
+    }
+
+    // Seizoen aanmaken als er geen actief seizoen is
+    let season = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
+    if (!season) {
+      season = await prisma.season.create({
+        data: {
+          name: 'Eredivisie 2024/2025',
+          status: 'ACTIVE',
+          start_date: new Date('2024-08-01'),
+          end_date: new Date('2025-06-30'),
+        },
+      })
+    }
+
+    // Actieve gameweek aanmaken of deadline verlengen
+    let gw = await prisma.gameweek.findFirst({
+      where: { season_id: season.id, status: 'ACTIVE' },
+      orderBy: { number: 'desc' },
+    })
+    const newDeadline = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000) // 14 dagen
+    if (!gw) {
+      gw = await prisma.gameweek.create({
+        data: {
+          season_id: season.id,
+          number: 28,
+          status: 'ACTIVE',
+          start_date: new Date(),
+          end_date: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          deadline: newDeadline,
+        },
+      })
+    } else {
+      await prisma.gameweek.update({
+        where: { id: gw.id },
+        data: { deadline: newDeadline },
+      })
+    }
+
+    // Marktplaats vullen (top 20 spelers op form)
+    const seller = await prisma.user.findFirst({ where: { is_admin: true } })
+    let listingsCreated = 0
+    if (seller) {
+      const topPlayers = await prisma.player.findMany({
+        where: { availability: 'AVAILABLE' },
+        orderBy: { form: 'desc' },
+        take: 20,
+      })
+      for (const player of topPlayers) {
+        const existing = await prisma.marketplaceListing.findFirst({
+          where: { player_id: player.id, status: 'ACTIVE' },
+        })
+        if (existing) continue
+        await prisma.marketplaceListing.create({
+          data: {
+            seller_id: seller.id,
+            player_id: player.id,
+            listing_type: 'FIXED',
+            price: Number(player.price) * 1.05,
+            status: 'ACTIVE',
+            expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+          },
+        })
+        listingsCreated++
+      }
+    }
+
+    sendSuccess(res, {
+      players_created: playersCreated,
+      players_skipped: playersSkipped,
+      season: season.name,
+      gameweek: `GW${gw.number}`,
+      deadline: newDeadline,
+      marketplace_listings: listingsCreated,
+    }, `Bootstrap compleet! ${playersCreated} spelers, GW${gw.number} actief, ${listingsCreated} listings op markt`)
+  } catch (err) {
+    logger.error('Bootstrap mislukt', { err })
+    sendError(res, 'Bootstrap mislukt', 500)
+  }
+})
+
 export default router
