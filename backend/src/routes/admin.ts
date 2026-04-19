@@ -454,6 +454,7 @@ router.post('/seed-marketplace', async (_req: AuthRequest, res: Response): Promi
           listing_type: 'FIXED',
           price: Number(player.price) * 1.05,
           status: 'ACTIVE',
+          expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
         },
       })
       created++
