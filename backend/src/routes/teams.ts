@@ -546,15 +546,12 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
     const transfersOut = [...currentPlayerIds].filter(pid => !newPlayerIds.has(pid))
     const transfersIn = [...newPlayerIds].filter(pid => !currentPlayerIds.has(pid))
 
-    // Check deadline lock
+    // Check deadline — na deadline zijn transfers toegestaan maar kosten 4 punten straf
     const currentSeason = await prisma.season.findFirst({ where: { status: 'ACTIVE' } })
     const activeGw = await prisma.gameweek.findFirst({
       where: { season_id: currentSeason?.id, status: 'ACTIVE' },
     })
-    if (activeGw && new Date() > activeGw.deadline && transfersIn.length > 0) {
-      sendError(res, `Transfer deadline verstreken voor speelronde ${activeGw.number}`, 403)
-      return
-    }
+    const isAfterDeadline = activeGw && new Date() > activeGw.deadline
 
     // Bereken penalty voor extra transfers (>1 per GW)
     let penaltyPoints = 0
@@ -564,7 +561,9 @@ router.put('/:id', authenticate, async (req: AuthRequest, res: Response): Promis
         where: { user_id: req.user!.id, type: 'transfer_in', created_at: { gte: gwStart } },
       })
       const totalAfter = prevTransfersThisGw + transfersIn.length
-      const extraTransfers = Math.max(0, totalAfter - 1)
+      // Na deadline: alle transfers kosten 4 punten straf
+      const freeTransfers = isAfterDeadline ? 0 : 1
+      const extraTransfers = Math.max(0, totalAfter - freeTransfers)
       penaltyPoints = extraTransfers * 4
     }
 

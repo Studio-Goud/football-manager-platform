@@ -191,10 +191,6 @@ export default function TeamPage() {
   }
 
   const handleSlotClick = (slot: number) => {
-    if (isDeadlinePassed) {
-      toast.error('Deadline verstreken — transfers geblokkeerd')
-      return
-    }
     setSelectedSlot(slot)
     setSelectedSlotPosition(getPositionForSlot(slot))
     setShowTransfer(true)
@@ -279,21 +275,19 @@ export default function TeamPage() {
             ) : 'Laden...'}
           </p>
         </div>
-        {!isDeadlinePassed && (
-          <Button onClick={handleSave} loading={isSaving} className="hidden sm:flex">
-            <Save className="w-4 h-4 mr-2" />
-            Opslaan
-          </Button>
-        )}
+        <Button onClick={handleSave} loading={isSaving} className="hidden sm:flex">
+          <Save className="w-4 h-4 mr-2" />
+          Opslaan
+        </Button>
       </div>
 
-      {/* Deadline lock banner */}
+      {/* Deadline info banner */}
       {isDeadlinePassed && (
-        <div className="bg-orange-500/10 border border-orange-500/30 rounded-xl p-3 flex items-center gap-3">
-          <Lock className="w-5 h-5 text-orange-400 flex-shrink-0" />
+        <div className="bg-blue-500/10 border border-blue-500/30 rounded-xl p-3 flex items-center gap-3">
+          <Lock className="w-5 h-5 text-blue-400 flex-shrink-0" />
           <div>
-            <p className="font-semibold text-orange-400 text-sm">Transfers vergrendeld</p>
-            <p className="text-xs text-gray-400">De deadline voor deze speelronde is verstreken. Je kunt geen wijzigingen meer maken.</p>
+            <p className="font-semibold text-blue-400 text-sm">Speelronde loopt — transfers worden gestraft</p>
+            <p className="text-xs text-gray-400">Je kunt nog steeds je team aanpassen en opslaan. Extra transfers kosten punten.</p>
           </div>
         </div>
       )}
