@@ -445,4 +445,15 @@ router.get('/activity', authenticate, async (req: AuthRequest, res: Response): P
   }
 })
 
+// POST /auth/repair-admin — herstel het admin testaccount (geen auth vereist)
+router.post('/repair-admin', async (_req: Request, res: Response): Promise<void> => {
+  try {
+    const { ensureTestAccount } = await import('../seed-test-account')
+    await ensureTestAccount()
+    sendSuccess(res, null, 'Admin account hersteld')
+  } catch (err) {
+    sendError(res, `Herstel mislukt: ${err}`, 500)
+  }
+})
+
 export default router

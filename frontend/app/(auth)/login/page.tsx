@@ -4,8 +4,9 @@ import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { motion } from 'framer-motion'
-import { Eye, EyeOff, LogIn } from 'lucide-react'
+import { Eye, EyeOff, LogIn, Loader2 } from 'lucide-react'
 import { useAuthStore } from '@/store/authStore'
+import api from '@/lib/api'
 import toast from 'react-hot-toast'
 
 export default function LoginPage() {
@@ -104,11 +105,28 @@ export default function LoginPage() {
         <div className="mt-6 pt-6 border-t border-[#1E2A45]">
           <button
             onClick={async () => {
+              const adminToast = toast.loading('Inloggen als admin...')
               try {
                 await login('ricardo@test.nl', 'ricardo@test.nl')
+                toast.dismiss(adminToast)
                 router.push('/dashboard')
-              } catch {
-                toast.error('Admin login mislukt')
+              } catch (err: unknown) {
+                const status = (err as { response?: { status?: number } })?.response?.status
+                if (status === 401 || !status) {
+                  // Account bestaat niet of wachtwoord klopt niet — herstel first
+                  toast.loading('Account herstellen...', { id: adminToast })
+                  try {
+                    await api.post('/auth/repair-admin')
+                    await login('ricardo@test.nl', 'ricardo@test.nl')
+                    toast.dismiss(adminToast)
+                    router.push('/dashboard')
+                  } catch {
+                    toast.error('Backend niet bereikbaar. Wacht 30s en probeer opnieuw.', { id: adminToast, duration: 6000 })
+                  }
+                } else {
+                  const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+                  toast.error(msg ?? 'Admin login mislukt', { id: adminToast })
+                }
               }
             }}
             disabled={isLoading}
