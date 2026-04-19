@@ -125,33 +125,6 @@ router.get('/best-value', authenticate, async (_req: Request, res: Response): Pr
   }
 })
 
-// GET /players/:id — player detail
-router.get('/:id', authenticate, async (req: Request, res: Response): Promise<void> => {
-  try {
-    const player = await prisma.player.findUnique({
-      where: { id: parseInt(req.params.id) },
-      include: {
-        price_history: { orderBy: { recorded_at: 'desc' }, take: 14 },
-        match_performances: { orderBy: { match_id: 'desc' }, take: 5, include: { match: true } },
-      },
-    })
-
-    if (!player) {
-      sendError(res, 'Speler niet gevonden', 404)
-      return
-    }
-
-    sendSuccess(res, {
-      ...player,
-      price: Number(player.price),
-      form: Number(player.form),
-      total_points: Number(player.total_points),
-    })
-  } catch {
-    sendError(res, 'Ophalen mislukt', 500)
-  }
-})
-
 // GET /players/ownership — top 20 most owned players + total teams count
 router.get('/ownership', authenticate, async (_req: Request, res: Response): Promise<void> => {
   try {
@@ -263,6 +236,33 @@ router.get('/differentials', authenticate, async (_req: Request, res: Response):
       .slice(0, 10)
 
     sendSuccess(res, differentials)
+  } catch {
+    sendError(res, 'Ophalen mislukt', 500)
+  }
+})
+
+// GET /players/:id — player detail (must be LAST — catches all unmatched segments)
+router.get('/:id', authenticate, async (req: Request, res: Response): Promise<void> => {
+  try {
+    const player = await prisma.player.findUnique({
+      where: { id: parseInt(req.params.id) },
+      include: {
+        price_history: { orderBy: { recorded_at: 'desc' }, take: 14 },
+        match_performances: { orderBy: { match_id: 'desc' }, take: 5, include: { match: true } },
+      },
+    })
+
+    if (!player) {
+      sendError(res, 'Speler niet gevonden', 404)
+      return
+    }
+
+    sendSuccess(res, {
+      ...player,
+      price: Number(player.price),
+      form: Number(player.form),
+      total_points: Number(player.total_points),
+    })
   } catch {
     sendError(res, 'Ophalen mislukt', 500)
   }

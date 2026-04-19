@@ -26,6 +26,67 @@ interface TransferEntry {
   date: string
 }
 
+function CreateTeamScreen() {
+  const [name, setName] = useState('')
+  const [formation, setFormation] = useState('4-3-3')
+  const [loading, setLoading] = useState(false)
+
+  const handleCreate = async () => {
+    if (name.trim().length < 3) { toast.error('Teamnaam moet minimaal 3 tekens zijn'); return }
+    setLoading(true)
+    try {
+      await api.post('/teams', { name: name.trim(), formation, entry_fee: 5 })
+      toast.success('Team aangemaakt! Selecteer nu je spelers.')
+      window.location.reload()
+    } catch (err: unknown) {
+      const msg = (err as { response?: { data?: { message?: string } } })?.response?.data?.message
+      toast.error(msg ?? 'Aanmaken mislukt')
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center px-4">
+      <div className="text-6xl mb-4">⚽</div>
+      <h1 className="text-3xl font-black mb-2">Maak jouw team aan</h1>
+      <p className="text-gray-400 mb-8 max-w-md">Kies een naam en formatie. Daarna stel je je 11 spelers in.</p>
+
+      <div className="w-full max-w-sm space-y-4">
+        <input
+          type="text"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Naam van jouw team..."
+          maxLength={50}
+          className="w-full bg-[#0F1629] border border-[#1E2A45] rounded-xl px-4 py-3 text-white placeholder-gray-600 focus:outline-none focus:border-[#00FF87] transition-colors"
+        />
+
+        <div className="grid grid-cols-3 gap-2">
+          {['4-4-2', '4-3-3', '3-5-2', '4-5-1', '5-3-2', '3-4-3'].map(f => (
+            <button
+              key={f}
+              onClick={() => setFormation(f)}
+              className={`py-2 rounded-xl text-sm font-bold border transition-all ${formation === f ? 'bg-[#00FF87] text-[#0A0E1A] border-[#00FF87]' : 'border-[#1E2A45] text-gray-400 hover:border-[#00FF87]/30'}`}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+
+        <button
+          onClick={handleCreate}
+          disabled={loading || name.trim().length < 3}
+          className="w-full bg-[#00FF87] text-[#0A0E1A] py-3 rounded-xl font-bold hover:bg-[#00CC6A] transition-colors disabled:opacity-50"
+        >
+          {loading ? 'Aanmaken...' : 'Team aanmaken →'}
+        </button>
+
+        <p className="text-xs text-gray-600">Inschrijfgeld: 5 coins (eenmalig voor dit seizoen)</p>
+      </div>
+    </div>
+  )
+}
+
 export default function TeamPage() {
   const { setFormation } = useTeamStore()
   const { team, isLoading, saveTeam, isSaving } = useTeam()
@@ -199,6 +260,10 @@ export default function TeamPage() {
         </div>
       </div>
     )
+  }
+
+  if (!team) {
+    return <CreateTeamScreen />
   }
 
   return (

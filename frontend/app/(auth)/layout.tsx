@@ -22,7 +22,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       {/* Footer */}
       <footer className="p-6 text-center">
         <p className="text-xs text-gray-600">
-          18+ | Verantwoord spelen | MGA Licensed
+          FootballManager Pro · Skill-based fantasy football
         </p>
       </footer>
     </div>

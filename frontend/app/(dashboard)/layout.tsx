@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Sidebar } from '@/components/layout/Sidebar'
 import { Topbar } from '@/components/layout/Topbar'
 import { BottomNav } from '@/components/layout/BottomNav'
@@ -17,10 +18,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { show: showOnboarding, complete: completeOnboarding } = useOnboarding()
   const { isAuthenticated, refreshUser } = useAuthStore()
+  const router = useRouter()
   usePushNotifications()
 
   useEffect(() => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated) {
+      router.replace('/login')
+      return
+    }
     api.post('/auth/daily-bonus').then(res => {
       const data = res.data?.data
       if (data?.claimed) {

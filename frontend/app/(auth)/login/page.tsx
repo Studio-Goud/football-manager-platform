@@ -100,17 +100,21 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Demo login */}
+        {/* Admin quick login */}
         <div className="mt-6 pt-6 border-t border-[#1E2A45]">
-          <p className="text-xs text-gray-500 text-center mb-3">Demo account</p>
           <button
-            onClick={() => {
-              setEmail('demo@footballmanager.pro')
-              setPassword('Demo1234!')
+            onClick={async () => {
+              try {
+                await login('ricardo@test.nl', 'ricardo@test.nl')
+                router.push('/dashboard')
+              } catch {
+                toast.error('Admin login mislukt')
+              }
             }}
-            className="w-full border border-[#1E2A45] text-gray-400 py-2.5 rounded-xl text-sm hover:border-[#00FF87]/30 hover:text-white transition-all"
+            disabled={isLoading}
+            className="w-full border border-[#FFD700]/30 text-[#FFD700] py-2.5 rounded-xl text-sm font-semibold hover:bg-[#FFD700]/10 transition-all disabled:opacity-50"
           >
-            Gebruik demo account
+            ⚡ ADMIN — Direct inloggen
           </button>
         </div>
       </div>

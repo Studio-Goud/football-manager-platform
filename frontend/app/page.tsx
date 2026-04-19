@@ -80,10 +80,12 @@ export default function LandingPage() {
   const { isAuthenticated } = useAuthStore()
 
   useEffect(() => {
-    router.replace('/dashboard')
-  }, [router])
-
-  if (isAuthenticated) return null
+    if (isAuthenticated) {
+      router.replace('/dashboard')
+    } else {
+      router.replace('/login')
+    }
+  }, [isAuthenticated, router])
 
   return (
     <div className="min-h-screen bg-[#0A0E1A] text-white overflow-x-hidden">
