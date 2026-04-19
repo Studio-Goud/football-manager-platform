@@ -106,6 +106,18 @@ export default function AdminPage() {
     toast.success('✅ Wedstrijd cache geleegd — KNVB Beker & live scores verversen direct', { duration: 5000 })
   })
 
+  const extendDeadline = () => doAction('Deadline verlengen', async () => {
+    const res = await api.post('/admin/gameweeks/extend-deadline')
+    const r = res.data?.data
+    toast.success(`✅ Deadline verlengd naar ${new Date(r?.new_deadline).toLocaleDateString('nl-NL', { day: 'numeric', month: 'long' })}`, { duration: 5000 })
+  })
+
+  const seedMarketplace = () => doAction('Marktplaats vullen', async () => {
+    const res = await api.post('/admin/seed-marketplace')
+    const r = res.data?.data
+    toast.success(`✅ ${r?.created ?? 0} listings aangemaakt op de markt`, { duration: 5000 })
+  })
+
   const createSeason = () => doAction('Seizoen aanmaken', () =>
     api.post('/admin/seasons', { name: `Seizoen ${new Date().getFullYear()}` })
   )
@@ -203,11 +215,19 @@ export default function AdminPage() {
                 <RefreshCw className="w-4 h-4 mr-2" />
                 Spelers synchroniseren vanuit API (~2 min)
               </Button>
+              <Button onClick={extendDeadline} loading={actionLoading === 'Deadline verlengen'} className="w-full" variant="secondary">
+                <Calendar className="w-4 h-4 mr-2" />
+                Deadline verlengen (7 dagen)
+              </Button>
             </div>
           </Card>
           <Card className="p-5">
             <h2 className="font-bold mb-3">🗄️ Database</h2>
             <div className="space-y-3">
+              <Button onClick={seedMarketplace} loading={actionLoading === 'Marktplaats vullen'} className="w-full bg-[#3B82F6] hover:bg-[#2563EB] text-white" >
+                <Database className="w-4 h-4 mr-2" />
+                Marktplaats vullen (demo listings)
+              </Button>
               <Button onClick={seedDemo} loading={actionLoading === 'Demo seed'} className="w-full" variant="secondary">
                 <Database className="w-4 h-4 mr-2" />
                 Demo spelers zaai (als database leeg is)
@@ -219,10 +239,6 @@ export default function AdminPage() {
               <Button onClick={giveNewSeasonBonus} loading={actionLoading === 'Startbonus uitdelen'} className="w-full" variant="secondary">
                 <Zap className="w-4 h-4 mr-2" />
                 Startbonus uitdelen (1000 coins)
-              </Button>
-              <Button onClick={seedAchievements} loading={actionLoading === 'Achievements zaai'} className="w-full" variant="secondary">
-                <Trophy className="w-4 h-4 mr-2" />
-                Achievements zaai (badges)
               </Button>
               <Button onClick={seedAchievements} loading={actionLoading === 'Achievements zaai'} className="w-full" variant="secondary">
                 <Trophy className="w-4 h-4 mr-2" />
